@@ -18,7 +18,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api', userRoutes);
 
 // Route for super-admin frontend
-app.get('/super-admin', (req, res) => {
+app.get(['/super-admin', '/super-admin/login'], (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'super_admin.html'));
 });
 

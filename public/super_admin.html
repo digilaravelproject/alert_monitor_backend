@@ -11,7 +11,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="super_admin.css">
+    <link rel="stylesheet" href="/super_admin.css">
 </head>
 <body>
     <!-- Background visual assets -->
@@ -69,9 +69,13 @@
             </div>
 
             <div class="sidebar-menu">
-                <a href="#" class="menu-item active">
+                <a href="#" class="menu-item active" id="menu-staff">
                     <i class="fa-solid fa-users-gear"></i>
                     <span>Staff Enrollment</span>
+                </a>
+                <a href="#" class="menu-item" id="menu-permissions">
+                    <i class="fa-solid fa-key"></i>
+                    <span>Manage Permissions</span>
                 </a>
             </div>
 
@@ -94,86 +98,135 @@
 
         <!-- Main Dashboard Content -->
         <main class="main-content">
-            <header class="content-header">
-                <div class="header-title">
-                    <h1>Staff Enrollment</h1>
-                    <p class="subtitle">Enroll and manage security personnel and administrators</p>
-                </div>
-                <button id="open-modal-btn" class="btn btn-primary">
-                    <i class="fa-solid fa-plus"></i>
-                    <span>Enroll Staff</span>
-                </button>
-            </header>
-
-            <!-- Stats Section -->
-            <section class="stats-grid">
-                <div class="stats-card card-blue">
-                    <div class="stats-icon">
-                        <i class="fa-solid fa-users"></i>
+            <div id="staff-section">
+                <header class="content-header">
+                    <div class="header-title">
+                        <h1>Staff Enrollment</h1>
+                        <p class="subtitle">Enroll and manage security personnel and administrators</p>
                     </div>
-                    <div class="stats-details">
-                        <span class="stats-title">Total Staff</span>
-                        <h3 id="stat-total-staff">0</h3>
-                    </div>
-                </div>
-
-                <div class="stats-card card-purple">
-                    <div class="stats-icon">
-                        <i class="fa-solid fa-user-shield"></i>
-                    </div>
-                    <div class="stats-details">
-                        <span class="stats-title">Admins</span>
-                        <h3 id="stat-admins">0</h3>
-                    </div>
-                </div>
-
-                <div class="stats-card card-teal">
-                    <div class="stats-icon">
-                        <i class="fa-solid fa-person-military-pointing"></i>
-                    </div>
-                    <div class="stats-details">
-                        <span class="stats-title">Security Guards</span>
-                        <h3 id="stat-guards">0</h3>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Table View Section -->
-            <section class="table-section">
-                <div class="table-actions">
-                    <div class="search-box">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="search-input" placeholder="Search by name, phone or role...">
-                    </div>
-                    <button id="refresh-btn" class="btn btn-secondary">
-                        <i class="fa-solid fa-rotate"></i>
+                    <button id="open-modal-btn" class="btn btn-primary">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Enroll Staff</span>
                     </button>
-                </div>
+                </header>
 
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Phone Number</th>
-                                <th>Role</th>
-                                <th>Access Level</th>
-                                <th>Location</th>
-                                <th>Enrolled Date</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-table-body">
-                            <!-- Populated dynamically via JS -->
-                            <tr class="table-loading">
-                                <td colspan="6">
-                                    <div class="loader-spinner"></div>
-                                    <span>Fetching staff records...</span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+                <!-- Stats Section -->
+                <section class="stats-grid">
+                    <div class="stats-card card-blue">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Total Staff</span>
+                            <h3 id="stat-total-staff">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="stats-card card-purple">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Admins</span>
+                            <h3 id="stat-admins">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="stats-card card-teal">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-person-military-pointing"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Security Guards</span>
+                            <h3 id="stat-guards">0</h3>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Table View Section -->
+                <section class="table-section">
+                    <div class="table-actions">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="search-input" placeholder="Search by name, phone or role...">
+                        </div>
+                        <button id="refresh-btn" class="btn btn-secondary">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Phone Number</th>
+                                    <th>Role</th>
+                                    <th>Access Level</th>
+                                    <th>Location</th>
+                                    <th>Enrolled Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <!-- Populated dynamically via JS -->
+                                <tr class="table-loading">
+                                    <td colspan="6">
+                                        <div class="loader-spinner"></div>
+                                        <span>Fetching staff records...</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <div id="permissions-section" style="display: none;">
+                <header class="content-header">
+                    <div class="header-title">
+                        <h1>Manage Permissions</h1>
+                        <p class="subtitle">Define and configure security permissions for the system</p>
+                    </div>
+                    <button id="open-permission-modal-btn" class="btn btn-primary">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Add Permission</span>
+                    </button>
+                </header>
+
+                <!-- Table View Section -->
+                <section class="table-section">
+                    <div class="table-actions">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="permission-search-input" placeholder="Search by name or description...">
+                        </div>
+                        <button id="permission-refresh-btn" class="btn btn-secondary">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th style="width: 150px; text-align: center;">Status</th>
+                                    <th style="width: 150px; text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="permissions-table-body">
+                                <tr class="table-loading">
+                                    <td colspan="4">
+                                        <div class="loader-spinner"></div>
+                                        <span>Fetching permissions...</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
@@ -232,7 +285,54 @@
         </div>
     </div>
 
+    <!-- PERMISSION MODAL -->
+    <div id="permission-modal" class="modal-wrapper">
+        <div class="modal-card">
+            <header class="modal-header">
+                <h2 id="permission-modal-title">Add New Permission</h2>
+                <button id="close-permission-modal-btn" class="modal-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <form id="permission-form" class="modal-form">
+                <input type="hidden" id="permission-id">
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="permission-name"><i class="fa-solid fa-tag"></i> Permission Name</label>
+                        <input type="text" id="permission-name" placeholder="e.g. Manage Staff" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="permission-desc"><i class="fa-regular fa-file-lines"></i> Description</label>
+                        <input type="text" id="permission-desc" placeholder="Briefly describe the capability" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12" style="flex-direction: row; align-items: center; gap: 12px; margin-top: 8px;">
+                        <label class="switch">
+                            <input type="checkbox" id="permission-active" checked>
+                            <span class="slider round"></span>
+                        </label>
+                        <span style="font-size: 14px; font-weight: 500; color: var(--text-main);">Active Status</span>
+                    </div>
+                </div>
+
+                <footer class="modal-footer">
+                    <button type="button" id="cancel-permission-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" id="permission-submit-btn" class="btn btn-primary">
+                        <span id="permission-submit-text">Save Permission</span>
+                        <i class="fa-solid fa-floppy-disk"></i>
+                    </button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
     <!-- Custom JS -->
-    <script src="super_admin.js"></script>
+    <script src="/super_admin.js"></script>
 </body>
 </html>

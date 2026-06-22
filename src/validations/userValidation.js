@@ -13,7 +13,7 @@ const validateAddOrUpdateUser = (req, res, next) => {
             errors.push('Mobile number must be a valid 10-digit number');
         }
     }
-    if (!role || typeof role !== 'string' || role.trim() === '') {
+    if (role === undefined || role === null || (typeof role !== 'string' && typeof role !== 'number') || (typeof role === 'string' && role.trim() === '')) {
         errors.push('Role is required');
     }
     if (!access_level || typeof access_level !== 'string' || access_level.trim() === '') {

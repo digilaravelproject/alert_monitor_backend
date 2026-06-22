@@ -30,6 +30,87 @@ async function updateSchema() {
             BEGIN
                 PRINT 'is_blocked column already exists.';
             END
+
+            -- Create temp_user_tbl table
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[temp_user_tbl]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[temp_user_tbl] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    email NVARCHAR(100) NULL,
+                    phone_number NVARCHAR(20) NOT NULL,
+                    created_at DATETIME DEFAULT GETDATE()
+                );
+                PRINT 'Table temp_user_tbl created.';
+            END
+
+            -- Create permissions table
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[permissions]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[permissions] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    name NVARCHAR(100) UNIQUE NOT NULL,
+                    description NVARCHAR(255) NULL,
+                    is_active BIT NOT NULL DEFAULT 1,
+                    created_at DATETIME DEFAULT GETDATE()
+                );
+                PRINT 'Table permissions created.';
+            END
+
+            -- Create roles table
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[roles]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[roles] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    name NVARCHAR(100) NOT NULL,
+                    description NVARCHAR(255) NULL,
+                    admin_id INT NULL,
+                    created_at DATETIME DEFAULT GETDATE()
+                );
+                PRINT 'Table roles created.';
+            END
+
+            -- Create role_permissions table
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[role_permissions]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[role_permissions] (
+                    role_id INT NOT NULL,
+                    permission_id INT NOT NULL,
+                    PRIMARY KEY (role_id, permission_id),
+                    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+                    FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+                );
+                PRINT 'Table role_permissions created.';
+            END
+
+            -- Check and add role_id column to users table
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[users]') AND name = 'role_id')
+            BEGIN
+                ALTER TABLE [dbo].[users] ADD role_id INT NULL;
+                ALTER TABLE [dbo].[users] ADD CONSTRAINT FK_users_role_id FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL;
+                PRINT 'Added role_id column to users.';
+            END
+            ELSE
+            BEGIN
+                PRINT 'role_id column already exists.';
+            END
+
+            -- Seed default permissions
+            IF NOT EXISTS (SELECT * FROM permissions WHERE name = 'Manage Devices') INSERT INTO permissions (name, description, is_active) VALUES ('Manage Devices', 'Ability to view and edit devices', 1);
+            IF NOT EXISTS (SELECT * FROM permissions WHERE name = 'View Reports') INSERT INTO permissions (name, description, is_active) VALUES ('View Reports', 'Ability to view analytics and logs', 1);
+            IF NOT EXISTS (SELECT * FROM permissions WHERE name = 'Manage Staff') INSERT INTO permissions (name, description, is_active) VALUES ('Manage Staff', 'Ability to enroll and update staff', 1);
+            IF NOT EXISTS (SELECT * FROM permissions WHERE name = 'Edit Alerts') INSERT INTO permissions (name, description, is_active) VALUES ('Edit Alerts', 'Ability to customize alert thresholds', 1);
+            IF NOT EXISTS (SELECT * FROM permissions WHERE name = 'Setup Organization') INSERT INTO permissions (name, description, is_active) VALUES ('Setup Organization', 'Ability to configure org settings', 1);
+            IF NOT EXISTS (SELECT * FROM permissions WHERE name = 'Manage Roles') INSERT INTO permissions (name, description, is_active) VALUES ('Manage Roles', 'Ability to create and update roles', 1);
+            IF NOT EXISTS (SELECT * FROM permissions WHERE name = 'Manage Levels') INSERT INTO permissions (name, description, is_active) VALUES ('Manage Levels', 'Ability to configure security levels', 1);
+            IF NOT EXISTS (SELECT * FROM permissions WHERE name = 'Manage Locations') INSERT INTO permissions (name, description, is_active) VALUES ('Manage Locations', 'Ability to configure guard stations and locations', 1);
+            IF NOT EXISTS (SELECT * FROM permissions WHERE name = 'View System Logs') INSERT INTO permissions (name, description, is_active) VALUES ('View System Logs', 'Ability to view raw backend logs', 1);
+            IF NOT EXISTS (SELECT * FROM permissions WHERE name = 'Export Data') INSERT INTO permissions (name, description, is_active) VALUES ('Export Data', 'Ability to download reports and user details', 1);
+
+            -- Seed default system roles (admin_id is NULL)
+            IF NOT EXISTS (SELECT * FROM roles WHERE name = 'Admin' AND admin_id IS NULL) INSERT INTO roles (name, description, admin_id) VALUES ('Admin', 'Default System Administrator', NULL);
+            IF NOT EXISTS (SELECT * FROM roles WHERE name = 'Security Guard' AND admin_id IS NULL) INSERT INTO roles (name, description, admin_id) VALUES ('Security Guard', 'Default Security Guard', NULL);
+            IF NOT EXISTS (SELECT * FROM roles WHERE name = 'Manager' AND admin_id IS NULL) INSERT INTO roles (name, description, admin_id) VALUES ('Manager', 'Default Security Manager', NULL);
+            IF NOT EXISTS (SELECT * FROM roles WHERE name = 'Supervisor' AND admin_id IS NULL) INSERT INTO roles (name, description, admin_id) VALUES ('Supervisor', 'Default Operations Supervisor', NULL);
         `);
 
         console.log('Database migration completed successfully.');

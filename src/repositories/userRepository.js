@@ -60,7 +60,8 @@ class UserRepository {
         const result = await pool.request()
             .input('name', sql.NVarChar, user.name)
             .input('phone_number', sql.NVarChar, user.phone_number)
-            .input('role', sql.NVarChar, user.role)
+            .input('role', sql.NVarChar, null) // "When staff addition and updation store the role id should not store role name."
+            .input('role_id', sql.Int, user.role_id)
             .input('access_level', sql.NVarChar, user.access_level)
             .input('location', sql.NVarChar, user.location)
             .input('created_at', sql.DateTime, user.created_at || new Date())
@@ -68,10 +69,10 @@ class UserRepository {
             .input('is_blocked', sql.Bit, user.is_blocked || 0)
             .query(`
                 INSERT INTO users 
-                (name, phone_number, role, access_level, location, created_at, admin_id, is_blocked)
-                OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone_number, INSERTED.role, INSERTED.access_level, INSERTED.location, INSERTED.created_at, INSERTED.admin_id, INSERTED.is_blocked
+                (name, phone_number, role, role_id, access_level, location, created_at, admin_id, is_blocked)
+                OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone_number, INSERTED.role, INSERTED.role_id, INSERTED.access_level, INSERTED.location, INSERTED.created_at, INSERTED.admin_id, INSERTED.is_blocked
                 VALUES 
-                (@name, @phone_number, @role, @access_level, @location, @created_at, @admin_id, @is_blocked)
+                (@name, @phone_number, @role, @role_id, @access_level, @location, @created_at, @admin_id, @is_blocked)
             `);
         return result.recordset[0];
     }
@@ -99,11 +100,12 @@ class UserRepository {
             .input('raw_phone', sql.NVarChar, rawPhone)
             .input('ten_digits', sql.NVarChar, tenDigits)
             .query(`
-                SELECT TOP 1 id, name, phone_number, role, access_level, location, otp, otp_expiry 
-                FROM users 
-                WHERE phone_number = @phone_number
-                   OR phone_number = @raw_phone
-                   OR phone_number = @ten_digits
+                SELECT TOP 1 u.id, u.name, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, u.access_level, u.location, u.otp, u.otp_expiry 
+                FROM users u
+                LEFT JOIN roles r ON u.role_id = r.id
+                WHERE u.phone_number = @phone_number
+                   OR u.phone_number = @raw_phone
+                   OR u.phone_number = @ten_digits
             `);
         return result.recordset;
     }
@@ -144,9 +146,10 @@ class UserRepository {
         await poolConnect;
         const result = await pool.request()
             .query(`
-                SELECT id, name, email, phone_number, role, access_level, location, created_at
-                FROM users
-                ORDER BY id DESC
+                SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, u.access_level, u.location, u.created_at
+                FROM users u
+                LEFT JOIN roles r ON u.role_id = r.id
+                ORDER BY u.id DESC
             `);
         return result.recordset;
     }
@@ -175,23 +178,24 @@ class UserRepository {
     async findStaff(adminId, role, levelQuery) {
         await poolConnect;
         let queryStr = `
-            SELECT id, name, email, phone_number, role, access_level, location, created_at, admin_id, is_blocked 
-            FROM users 
+            SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, u.access_level, u.location, u.created_at, u.admin_id, u.is_blocked 
+            FROM users u
+            LEFT JOIN roles r ON u.role_id = r.id
             WHERE 1=1
         `;
         const request = pool.request();
 
         if (role === 'Admin') {
-            queryStr += ' AND admin_id = @adminId';
+            queryStr += ' AND u.admin_id = @adminId';
             request.input('adminId', sql.Int, adminId);
         }
 
         if (levelQuery && levelQuery.toLowerCase() !== 'all') {
-            queryStr += ' AND access_level = @accessLevel';
+            queryStr += ' AND u.access_level = @accessLevel';
             request.input('accessLevel', sql.NVarChar, levelQuery);
         }
 
-        queryStr += ' ORDER BY id DESC';
+        queryStr += ' ORDER BY u.id DESC';
 
         const result = await request.query(queryStr);
         return result.recordset;
@@ -200,23 +204,24 @@ class UserRepository {
     async searchStaff(adminId, role, query) {
         await poolConnect;
         let queryStr = `
-            SELECT id, name, email, phone_number, role, access_level, location, created_at, admin_id, is_blocked 
-            FROM users 
-            WHERE (name LIKE @searchQuery 
-               OR phone_number LIKE @searchQuery 
-               OR role LIKE @searchQuery 
-               OR access_level LIKE @searchQuery 
-               OR location LIKE @searchQuery)
+            SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, u.access_level, u.location, u.created_at, u.admin_id, u.is_blocked 
+            FROM users u
+            LEFT JOIN roles r ON u.role_id = r.id
+            WHERE (u.name LIKE @searchQuery 
+               OR u.phone_number LIKE @searchQuery 
+               OR COALESCE(r.name, u.role) LIKE @searchQuery 
+               OR u.access_level LIKE @searchQuery 
+               OR u.location LIKE @searchQuery)
         `;
         const request = pool.request();
         request.input('searchQuery', sql.NVarChar, `%${query.trim()}%`);
 
         if (role === 'Admin') {
-            queryStr += ' AND admin_id = @adminId';
+            queryStr += ' AND u.admin_id = @adminId';
             request.input('adminId', sql.Int, adminId);
         }
 
-        queryStr += ' ORDER BY id DESC';
+        queryStr += ' ORDER BY u.id DESC';
 
         const result = await request.query(queryStr);
         return result.recordset;
@@ -225,22 +230,28 @@ class UserRepository {
     async checkStaffOwnership(staffId, adminId, role) {
         await poolConnect;
         const request = pool.request().input('id', sql.Int, staffId);
-        let queryStr = 'SELECT id, admin_id, is_blocked FROM users WHERE id = @id';
+        let queryStr = `
+            SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, u.access_level, u.location, u.created_at, u.admin_id, u.is_blocked
+            FROM users u
+            LEFT JOIN roles r ON u.role_id = r.id
+            WHERE u.id = @id
+        `;
         if (role === 'Admin') {
-            queryStr += ' AND admin_id = @adminId';
+            queryStr += ' AND u.admin_id = @adminId';
             request.input('adminId', sql.Int, adminId);
         }
         const result = await request.query(queryStr);
         return result.recordset;
     }
 
-    async updateStaff(staffId, name, phone, staffRole, access_level, location) {
+    async updateStaff(staffId, name, phone, roleId, access_level, location) {
         await poolConnect;
         const result = await pool.request()
             .input('id', sql.Int, staffId)
             .input('name', sql.NVarChar, name.trim())
             .input('phone_number', sql.NVarChar, phone)
-            .input('role', sql.NVarChar, staffRole.trim())
+            .input('role', sql.NVarChar, null) // Set to null, do not store role name!
+            .input('role_id', sql.Int, roleId)
             .input('access_level', sql.NVarChar, access_level.trim())
             .input('location', sql.NVarChar, location.trim())
             .query(`
@@ -248,12 +259,27 @@ class UserRepository {
                 SET name = @name, 
                     phone_number = @phone_number, 
                     role = @role, 
+                    role_id = @role_id,
                     access_level = @access_level, 
                     location = @location
-                OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone_number, INSERTED.role, INSERTED.access_level, INSERTED.location, INSERTED.created_at, INSERTED.admin_id, INSERTED.is_blocked
+                OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone_number, INSERTED.role, INSERTED.role_id, INSERTED.access_level, INSERTED.location, INSERTED.created_at, INSERTED.admin_id, INSERTED.is_blocked
                 WHERE id = @id
             `);
         return result.recordset[0];
+    }
+
+    async getRolePermissions(roleId) {
+        if (!roleId) return [];
+        await poolConnect;
+        const result = await pool.request()
+            .input('roleId', sql.Int, roleId)
+            .query(`
+                SELECT p.name
+                FROM permissions p
+                JOIN role_permissions rp ON p.id = rp.permission_id
+                WHERE rp.role_id = @roleId AND p.is_active = 1
+            `);
+        return result.recordset.map(row => row.name);
     }
 
     async updateBlockedState(staffId, isBlocked) {
