@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Admin Portal - Alert Monitor</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="super_admin.css">
+</head>
+<body>
+    <!-- Background visual assets -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h1>Alert Monitor</h1>
+                <p class="subtitle">Super Admin Portal</p>
+            </div>
+            
+            <form id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="email"><i class="fa-regular fa-envelope"></i> Email Address</label>
+                    <input type="email" id="email" placeholder="admin@alertmonitor.com" required autocomplete="email">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password"><i class="fa-solid fa-lock"></i> Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                        <button type="button" id="toggle-password" class="password-toggle-btn">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <button type="submit" id="login-submit-btn" class="btn btn-primary btn-block">
+                    <span>Login</span>
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- DASHBOARD SCREEN -->
+    <div id="dashboard-screen" class="dashboard-wrapper" style="display: none;">
+        <!-- Navigation Header -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Alert Monitor</span>
+                </div>
+                <div class="sidebar-tag">Super Admin</div>
+            </div>
+
+            <div class="sidebar-menu">
+                <a href="#" class="menu-item active">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>Staff Enrollment</span>
+                </a>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="admin-profile">
+                    <div class="profile-avatar">
+                        <i class="fa-solid fa-user-tie"></i>
+                    </div>
+                    <div class="profile-info">
+                        <span class="profile-email" id="admin-email-display">admin@alertmonitor.com</span>
+                        <span class="profile-role">Super Admin</span>
+                    </div>
+                </div>
+                <button id="logout-btn" class="btn btn-logout btn-block">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Log Out</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Dashboard Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-title">
+                    <h1>Staff Enrollment</h1>
+                    <p class="subtitle">Enroll and manage security personnel and administrators</p>
+                </div>
+                <button id="open-modal-btn" class="btn btn-primary">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Enroll Staff</span>
+                </button>
+            </header>
+
+            <!-- Stats Section -->
+            <section class="stats-grid">
+                <div class="stats-card card-blue">
+                    <div class="stats-icon">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="stats-details">
+                        <span class="stats-title">Total Staff</span>
+                        <h3 id="stat-total-staff">0</h3>
+                    </div>
+                </div>
+
+                <div class="stats-card card-purple">
+                    <div class="stats-icon">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <div class="stats-details">
+                        <span class="stats-title">Admins</span>
+                        <h3 id="stat-admins">0</h3>
+                    </div>
+                </div>
+
+                <div class="stats-card card-teal">
+                    <div class="stats-icon">
+                        <i class="fa-solid fa-person-military-pointing"></i>
+                    </div>
+                    <div class="stats-details">
+                        <span class="stats-title">Security Guards</span>
+                        <h3 id="stat-guards">0</h3>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Table View Section -->
+            <section class="table-section">
+                <div class="table-actions">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="search-input" placeholder="Search by name, phone or role...">
+                    </div>
+                    <button id="refresh-btn" class="btn btn-secondary">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Phone Number</th>
+                                <th>Role</th>
+                                <th>Access Level</th>
+                                <th>Location</th>
+                                <th>Enrolled Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <!-- Populated dynamically via JS -->
+                            <tr class="table-loading">
+                                <td colspan="6">
+                                    <div class="loader-spinner"></div>
+                                    <span>Fetching staff records...</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ENROLLMENT MODAL -->
+    <div id="enrollment-modal" class="modal-wrapper">
+        <div class="modal-card">
+            <header class="modal-header">
+                <h2>Enroll New Staff</h2>
+                <button id="close-modal-btn" class="modal-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <form id="enrollment-form" class="modal-form">
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="staff-name"><i class="fa-regular fa-user"></i> Full Name</label>
+                        <input type="text" id="staff-name" placeholder="John Doe" required autocomplete="name">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="staff-phone"><i class="fa-solid fa-phone"></i> Mobile Number</label>
+                        <input type="text" id="staff-phone" placeholder="9876543210" required autocomplete="tel">
+                    </div>
+                    <div class="form-group col-6">
+                        <label for="staff-role"><i class="fa-solid fa-shield-halved"></i> Role</label>
+                        <select id="staff-role" required>
+                            <option value="" disabled selected>Select Role</option>
+                            <option value="Security Guard">Security Guard</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="staff-access"><i class="fa-solid fa-key"></i> Access Level</label>
+                        <input type="text" id="staff-access" placeholder="e.g. Level 1" required>
+                    </div>
+                    <div class="form-group col-6">
+                        <label for="staff-location"><i class="fa-solid fa-location-dot"></i> Location</label>
+                        <input type="text" id="staff-location" placeholder="e.g. Gate 1" required>
+                    </div>
+                </div>
+
+                <footer class="modal-footer">
+                    <button type="button" id="cancel-enroll-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" id="enroll-submit-btn" class="btn btn-primary">
+                        <span>Save Record</span>
+                        <i class="fa-solid fa-floppy-disk"></i>
+                    </button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="super_admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,275 @@
+const { sql, pool, poolConnect } = require('../config/database');
+
+class UserRepository {
+    // 1. Temp users
+    async createTempUser(email, phone_number) {
+        await poolConnect;
+        await pool.request()
+            .input('email', sql.VarChar, email)
+            .input('phone_number', sql.VarChar, phone_number)
+            .query(`
+                INSERT INTO temp_user_tbl
+                (email, phone_number)
+                VALUES
+                (@email, @phone_number)
+            `);
+    }
+
+    async getTempUsers() {
+        await poolConnect;
+        // In the original userRoutes.js, this was commented out. 
+        // We will uncomment the temp_user_tbl query so that the endpoint functions correctly.
+        const result = await pool.request()
+            .query(`
+                SELECT *
+                FROM temp_user_tbl
+                ORDER BY id DESC
+            `);
+        return result.recordset;
+    }
+
+    // 2. Exact match phone checks
+    async findExactPhone(phone) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('phone_number', sql.NVarChar, phone)
+            .query(`
+                SELECT TOP 1 id 
+                FROM users 
+                WHERE phone_number = @phone_number
+            `);
+        return result.recordset;
+    }
+
+    async findExactPhoneExcludingId(phone, id) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('phone_number', sql.NVarChar, phone)
+            .input('id', sql.Int, id)
+            .query(`
+                SELECT TOP 1 id 
+                FROM users 
+                WHERE phone_number = @phone_number AND id != @id
+            `);
+        return result.recordset;
+    }
+
+    // 3. User operations
+    async create(user) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('name', sql.NVarChar, user.name)
+            .input('phone_number', sql.NVarChar, user.phone_number)
+            .input('role', sql.NVarChar, user.role)
+            .input('access_level', sql.NVarChar, user.access_level)
+            .input('location', sql.NVarChar, user.location)
+            .input('created_at', sql.DateTime, user.created_at || new Date())
+            .input('admin_id', sql.Int, user.admin_id)
+            .input('is_blocked', sql.Bit, user.is_blocked || 0)
+            .query(`
+                INSERT INTO users 
+                (name, phone_number, role, access_level, location, created_at, admin_id, is_blocked)
+                OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone_number, INSERTED.role, INSERTED.access_level, INSERTED.location, INSERTED.created_at, INSERTED.admin_id, INSERTED.is_blocked
+                VALUES 
+                (@name, @phone_number, @role, @access_level, @location, @created_at, @admin_id, @is_blocked)
+            `);
+        return result.recordset[0];
+    }
+
+    async findUserForLogin(phone, rawPhone, tenDigits) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('phone_number', sql.NVarChar, phone)
+            .input('raw_phone', sql.NVarChar, rawPhone)
+            .input('ten_digits', sql.NVarChar, tenDigits)
+            .query(`
+                SELECT TOP 1 id, phone_number 
+                FROM users 
+                WHERE phone_number = @phone_number 
+                   OR phone_number = @raw_phone
+                   OR phone_number = @ten_digits
+            `);
+        return result.recordset;
+    }
+
+    async findUserForOtpVerification(phone, rawPhone, tenDigits) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('phone_number', sql.NVarChar, phone)
+            .input('raw_phone', sql.NVarChar, rawPhone)
+            .input('ten_digits', sql.NVarChar, tenDigits)
+            .query(`
+                SELECT TOP 1 id, name, phone_number, role, access_level, location, otp, otp_expiry 
+                FROM users 
+                WHERE phone_number = @phone_number
+                   OR phone_number = @raw_phone
+                   OR phone_number = @ten_digits
+            `);
+        return result.recordset;
+    }
+
+    async updateOtp(id, otp, otpExpiry) {
+        await poolConnect;
+        await pool.request()
+            .input('id', sql.Int, id)
+            .input('otp', sql.NVarChar, otp)
+            .input('otp_expiry', sql.DateTime, otpExpiry)
+            .query(`
+                UPDATE users 
+                SET otp = @otp, otp_expiry = @otp_expiry 
+                WHERE id = @id
+            `);
+    }
+
+    async clearOtp(id) {
+        await poolConnect;
+        await pool.request()
+            .input('id', sql.Int, id)
+            .query(`
+                UPDATE users 
+                SET otp = NULL, otp_expiry = NULL 
+                WHERE id = @id
+            `);
+    }
+
+    async findSuperAdminByEmail(email) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('email', sql.NVarChar, email)
+            .query('SELECT TOP 1 id, email, password FROM super_admins WHERE email = @email');
+        return result.recordset;
+    }
+
+    async findAllUsers() {
+        await poolConnect;
+        const result = await pool.request()
+            .query(`
+                SELECT id, name, email, phone_number, role, access_level, location, created_at
+                FROM users
+                ORDER BY id DESC
+            `);
+        return result.recordset;
+    }
+
+    async getStaffStats(adminId, role) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('adminId', sql.Int, adminId)
+            .query(role === 'Admin' ? `
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN is_blocked = 0 THEN 1 ELSE 0 END) as on_duty,
+                    SUM(CASE WHEN is_blocked = 1 THEN 1 ELSE 0 END) as off_duty
+                FROM users
+                WHERE admin_id = @adminId
+            ` : `
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN is_blocked = 0 THEN 1 ELSE 0 END) as on_duty,
+                    SUM(CASE WHEN is_blocked = 1 THEN 1 ELSE 0 END) as off_duty
+                FROM users
+            `);
+        return result.recordset[0] || { total: 0, on_duty: 0, off_duty: 0 };
+    }
+
+    async findStaff(adminId, role, levelQuery) {
+        await poolConnect;
+        let queryStr = `
+            SELECT id, name, email, phone_number, role, access_level, location, created_at, admin_id, is_blocked 
+            FROM users 
+            WHERE 1=1
+        `;
+        const request = pool.request();
+
+        if (role === 'Admin') {
+            queryStr += ' AND admin_id = @adminId';
+            request.input('adminId', sql.Int, adminId);
+        }
+
+        if (levelQuery && levelQuery.toLowerCase() !== 'all') {
+            queryStr += ' AND access_level = @accessLevel';
+            request.input('accessLevel', sql.NVarChar, levelQuery);
+        }
+
+        queryStr += ' ORDER BY id DESC';
+
+        const result = await request.query(queryStr);
+        return result.recordset;
+    }
+
+    async searchStaff(adminId, role, query) {
+        await poolConnect;
+        let queryStr = `
+            SELECT id, name, email, phone_number, role, access_level, location, created_at, admin_id, is_blocked 
+            FROM users 
+            WHERE (name LIKE @searchQuery 
+               OR phone_number LIKE @searchQuery 
+               OR role LIKE @searchQuery 
+               OR access_level LIKE @searchQuery 
+               OR location LIKE @searchQuery)
+        `;
+        const request = pool.request();
+        request.input('searchQuery', sql.NVarChar, `%${query.trim()}%`);
+
+        if (role === 'Admin') {
+            queryStr += ' AND admin_id = @adminId';
+            request.input('adminId', sql.Int, adminId);
+        }
+
+        queryStr += ' ORDER BY id DESC';
+
+        const result = await request.query(queryStr);
+        return result.recordset;
+    }
+
+    async checkStaffOwnership(staffId, adminId, role) {
+        await poolConnect;
+        const request = pool.request().input('id', sql.Int, staffId);
+        let queryStr = 'SELECT id, admin_id, is_blocked FROM users WHERE id = @id';
+        if (role === 'Admin') {
+            queryStr += ' AND admin_id = @adminId';
+            request.input('adminId', sql.Int, adminId);
+        }
+        const result = await request.query(queryStr);
+        return result.recordset;
+    }
+
+    async updateStaff(staffId, name, phone, staffRole, access_level, location) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('id', sql.Int, staffId)
+            .input('name', sql.NVarChar, name.trim())
+            .input('phone_number', sql.NVarChar, phone)
+            .input('role', sql.NVarChar, staffRole.trim())
+            .input('access_level', sql.NVarChar, access_level.trim())
+            .input('location', sql.NVarChar, location.trim())
+            .query(`
+                UPDATE users 
+                SET name = @name, 
+                    phone_number = @phone_number, 
+                    role = @role, 
+                    access_level = @access_level, 
+                    location = @location
+                OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone_number, INSERTED.role, INSERTED.access_level, INSERTED.location, INSERTED.created_at, INSERTED.admin_id, INSERTED.is_blocked
+                WHERE id = @id
+            `);
+        return result.recordset[0];
+    }
+
+    async updateBlockedState(staffId, isBlocked) {
+        await poolConnect;
+        await pool.request()
+            .input('id', sql.Int, staffId)
+            .input('is_blocked', sql.Bit, isBlocked)
+            .query('UPDATE users SET is_blocked = @is_blocked WHERE id = @id');
+    }
+
+    async deleteStaff(staffId) {
+        await poolConnect;
+        await pool.request()
+            .input('id', sql.Int, staffId)
+            .query('DELETE FROM users WHERE id = @id');
+    }
+}
+
+module.exports = new UserRepository();
