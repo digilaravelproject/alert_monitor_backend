@@ -185,6 +185,61 @@ async function updateSchema() {
             BEGIN
                 PRINT 'location_id column already exists.';
             END
+
+            -- Create tbl_DeviceFeedData table if it does not exist
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[tbl_DeviceFeedData]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[tbl_DeviceFeedData] (
+                    Id INT IDENTITY(1,1) PRIMARY KEY,
+                    ts INT NULL,
+                    Ts_date DATETIME NULL,
+                    node NVARCHAR(100) NULL,
+                    ev NVARCHAR(100) NULL,
+                    fw_ver NVARCHAR(50) NULL,
+                    x INT NULL,
+                    y INT NULL,
+                    spd INT NULL,
+                    mov BIT NULL,
+                    fall BIT NULL,
+                    mic_db FLOAT NULL,
+                    rssi INT NULL,
+                    bat_v FLOAT NULL,
+                    bat_pct INT NULL,
+                    charging BIT NULL,
+                    err INT NULL,
+                    msg NVARCHAR(255) NULL,
+                    status NVARCHAR(50) NULL,
+                    Insertdate DATETIME DEFAULT GETDATE()
+                );
+                PRINT 'Table tbl_DeviceFeedData created.';
+            END
+
+            -- Create devices table if it does not exist
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[devices]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[devices] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    name NVARCHAR(100) NOT NULL,
+                    serial_number NVARCHAR(100) UNIQUE NOT NULL,
+                    type NVARCHAR(100) NOT NULL,
+                    location_id INT NOT NULL,
+                    is_active BIT NOT NULL DEFAULT 1,
+                    created_at DATETIME DEFAULT GETDATE(),
+                    CONSTRAINT FK_devices_location_id FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE
+                );
+                PRINT 'Table devices created.';
+            END
+
+            -- Create dismissed_alerts table if it does not exist
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[dismissed_alerts]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[dismissed_alerts] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    feed_id BIGINT NOT NULL,
+                    dismissed_at DATETIME DEFAULT GETDATE()
+                );
+                PRINT 'Table dismissed_alerts created.';
+            END
         `);
 
         console.log('Database migration completed successfully.');

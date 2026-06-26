@@ -5,8 +5,10 @@ const permissionController = require('../controllers/permissionController');
 const roleController = require('../controllers/roleController');
 const levelController = require('../controllers/levelController');
 const locationController = require('../controllers/locationController');
+const deviceController = require('../controllers/deviceController');
 const { authenticateToken } = require('../middlewares/authMiddleware');
 const { validateAddOrUpdateUser, validateVerifyOtp } = require('../validations/userValidation');
+const { validateCreateDevice, validateUpdateDevice } = require('../validations/deviceValidation');
 
 // Temp User APIs
 router.post('/temp-users', userController.createTempUser);
@@ -67,5 +69,16 @@ router.get('/locations/:id', authenticateToken, locationController.getById);
 router.put('/locations/:id', authenticateToken, locationController.update);
 router.post('/locations/:id/toggle', authenticateToken, locationController.toggleStatus);
 router.delete('/locations/:id', authenticateToken, locationController.delete);
+
+// Devices & Alerts APIs (requires auth)
+router.post('/devices', authenticateToken, validateCreateDevice, deviceController.create);
+router.get('/devices/types', authenticateToken, deviceController.getTypes);
+router.get('/alerts', authenticateToken, deviceController.getAlertsData);
+router.get('/devices/search', authenticateToken, deviceController.search);
+router.post('/devices/:id/toggle', authenticateToken, deviceController.toggleStatus);
+router.get('/devices/:id', authenticateToken, deviceController.getById);
+router.put('/devices/:id', authenticateToken, validateUpdateDevice, deviceController.update);
+router.post('/devices/:id/remove-alert', authenticateToken, deviceController.removeAlert);
+router.post('/alerts/:feedId/remove', authenticateToken, deviceController.removeAlertByFeedId);
 
 module.exports = router;
