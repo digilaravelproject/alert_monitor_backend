@@ -89,6 +89,10 @@
                     <i class="fa-solid fa-location-dot"></i>
                     <span>Manage Locations</span>
                 </a>
+                <a href="#" class="menu-item" id="menu-devices">
+                    <i class="fa-solid fa-microchip"></i>
+                    <span>Manage Devices</span>
+                </a>
             </div>
 
             <div class="sidebar-footer">
@@ -412,6 +416,76 @@
                     </div>
                 </section>
             </div>
+
+            <!-- DEVICES SECTION -->
+            <div id="devices-section" style="display: none;">
+                <header class="content-header">
+                    <div class="header-title">
+                        <h1>Manage Devices</h1>
+                        <p class="subtitle">Monitor configurations, diagnostic health feeds, and alert analysis logs</p>
+                    </div>
+                    <button id="open-device-modal-btn" class="btn btn-primary">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Register Device</span>
+                    </button>
+                </header>
+
+                <!-- Stats Section -->
+                <section class="stats-grid">
+                    <div class="stats-card card-blue">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-microchip"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Total Devices</span>
+                            <h3 id="stat-devices-total">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="stats-card card-teal">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Active</span>
+                            <h3 id="stat-devices-active">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="stats-card card-orange">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Deactive</span>
+                            <h3 id="stat-devices-deactive">0</h3>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="table-section" style="background: none; border: none; padding: 0; box-shadow: none;">
+                    <div class="table-actions" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; margin-bottom: 25px;">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="device-search-input" placeholder="Search by device name or ID...">
+                        </div>
+                        
+                        <!-- Device Type Filter Pills -->
+                        <div class="filter-pills" id="device-type-filters" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+
+                        <button id="device-refresh-btn" class="btn btn-secondary">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
+                    </div>
+
+                    <!-- Cards Listing Grid Container -->
+                    <div class="devices-grid" id="devices-cards-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
@@ -682,6 +756,247 @@
                     </button>
                 </footer>
             </form>
+        </div>
+    </div>
+
+    <!-- DEVICE MODAL (Add/Edit) -->
+    <div id="device-modal" class="modal-wrapper">
+        <div class="modal-card">
+            <header class="modal-header">
+                <h2 id="device-modal-title">New Registration</h2>
+                <button id="close-device-modal-btn" class="modal-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <form id="device-form" class="modal-form">
+                <input type="hidden" id="device-id">
+                
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="device-name"><i class="fa-solid fa-tag"></i> DEVICE NAME</label>
+                        <input type="text" id="device-name" placeholder="e.g. Lobby Entrance sensor" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="device-serial"><i class="fa-solid fa-qrcode"></i> DEVICE ID / SERIAL</label>
+                        <input type="text" id="device-serial" placeholder="e.g. SN-908711" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="device-type"><i class="fa-solid fa-sliders"></i> DEVICE TYPE</label>
+                        <select id="device-type" required>
+                            <option value="" disabled selected>Select Device Type</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="device-location"><i class="fa-solid fa-location-dot"></i> LOCATION</label>
+                        <select id="device-location" required>
+                            <option value="" disabled selected>Select Location</option>
+                        </select>
+                    </div>
+                </div>
+
+                <footer class="modal-footer">
+                    <button type="button" id="cancel-device-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" id="device-submit-btn" class="btn btn-primary">Save & Register</button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+    <!-- DEVICE DETAILS VIEW MODAL -->
+    <div id="device-details-modal" class="modal-wrapper">
+        <div class="modal-card" style="max-width: 420px;">
+            <header class="modal-header" style="border-bottom: none;">
+                <h2>Device Diagnostics</h2>
+                <button id="close-device-details-btn" class="modal-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <div class="modal-body" style="padding: 20px;">
+                <!-- Header with Icon, Name, ID, Alert badge -->
+                <div class="device-detail-header" style="text-align: center; margin-bottom: 25px;">
+                    <div class="device-detail-icon-wrapper" id="detail-icon-container" style="width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto; font-size: 28px; background: rgba(255,255,255,0.05); color: var(--text-main);">
+                        <i class="fa-solid fa-microchip"></i>
+                    </div>
+                    <h3 id="detail-device-type" style="font-size: 20px; font-weight: 700; margin-bottom: 5px;">Fire Detector</h3>
+                    <p id="detail-device-serial" style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">ID: DM-2024-005</p>
+                    <span class="badge" id="detail-device-status" style="font-size: 12px; font-weight: 600; padding: 6px 16px; border-radius: 20px;">ALERTING</span>
+                </div>
+
+                <!-- Sensor Diagnostics Grid -->
+                <h4 style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">Sensor Diagnostics</h4>
+                
+                <div class="diagnostic-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px;">
+                    <div class="diagnostic-item" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: rgba(46,204,113,0.1); color: #2ecc71;">
+                                <i class="fa-solid fa-bolt" style="font-size: 13px;"></i>
+                            </div>
+                            <span style="font-size: 13px; font-weight: 500;">Signal Strength</span>
+                        </div>
+                        <span id="detail-signal-strength" style="font-size: 13px; font-weight: 600; color: #2ecc71;">Excellent</span>
+                    </div>
+
+                    <div class="diagnostic-item" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: rgba(52,152,219,0.1); color: #3498db;">
+                                <i class="fa-solid fa-battery-three-quarters" style="font-size: 13px;"></i>
+                            </div>
+                            <span style="font-size: 13px; font-weight: 500;">Battery</span>
+                        </div>
+                        <span id="detail-battery-level" style="font-size: 13px; font-weight: 600; color: #3498db;">70%</span>
+                    </div>
+
+                    <div class="diagnostic-item" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: rgba(155,89,182,0.1); color: #9b59b6;">
+                                <i class="fa-solid fa-location-dot" style="font-size: 13px;"></i>
+                            </div>
+                            <span style="font-size: 13px; font-weight: 500;">Assigned Zone</span>
+                        </div>
+                        <span id="detail-assigned-zone" style="font-size: 13px; font-weight: 600; color: var(--text-main);">Zone 5</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons: DISMISS, ACKNOWLEDGE, Full Analysis -->
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <button type="button" id="btn-dismiss-alert" class="btn btn-secondary" style="height: 42px; border-radius: 8px; font-weight: 600; font-size: 13px;">DISMISS</button>
+                        <button type="button" id="btn-acknowledge-alert" class="btn btn-primary" style="height: 42px; border-radius: 8px; font-weight: 600; font-size: 13px; background-color: #27ae60; border-color: #27ae60; color: white;">ACKNOWLEDGE</button>
+                    </div>
+                    <button type="button" id="btn-full-analysis" class="btn btn-block" style="height: 42px; border-radius: 8px; font-weight: 600; font-size: 13px; background-color: #222; border: 1px solid #444; color: white;">Full Analysis</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DEVICE ANALYSIS VIEW MODAL -->
+    <div id="device-analysis-modal" class="modal-wrapper">
+        <div class="modal-card" style="max-width: 480px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column;">
+            <header class="modal-header">
+                <div>
+                    <h2 id="analysis-device-type" style="margin-bottom: 2px;">Fire Detector</h2>
+                    <p id="analysis-device-serial" style="color: var(--text-muted); font-size: 12px; font-weight: 500;">ID: DM-2024-005</p>
+                </div>
+                <button id="close-device-analysis-btn" class="modal-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 20px;">
+                <!-- Stats Grid (Three circle cards) -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 25px;">
+                    <div style="text-align: center; background: rgba(255,255,255,0.01); padding: 12px 8px; border-radius: 10px; border: 1px solid var(--border-color);">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(230,126,34,0.1); color: #e67e22; margin: 0 auto 8px auto; font-size: 16px;">
+                            <i class="fa-solid fa-bullhorn"></i>
+                        </div>
+                        <h4 id="analysis-total-alerts" style="font-size: 18px; font-weight: 700; margin-bottom: 2px;">12</h4>
+                        <p style="font-size: 10px; color: var(--text-muted); font-weight: 500;">Total Alerts</p>
+                    </div>
+
+                    <div style="text-align: center; background: rgba(255,255,255,0.01); padding: 12px 8px; border-radius: 10px; border: 1px solid var(--border-color);">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(46,204,113,0.1); color: #2ecc71; margin: 0 auto 8px auto; font-size: 16px;">
+                            <i class="fa-solid fa-stopwatch"></i>
+                        </div>
+                        <h4 id="analysis-avg-response" style="font-size: 18px; font-weight: 700; margin-bottom: 2px;">4m</h4>
+                        <p style="font-size: 10px; color: var(--text-muted); font-weight: 500;">Avg. Response</p>
+                    </div>
+
+                    <div style="text-align: center; background: rgba(255,255,255,0.01); padding: 12px 8px; border-radius: 10px; border: 1px solid var(--border-color);">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(52,152,219,0.1); color: #3498db; margin: 0 auto 8px auto; font-size: 16px;">
+                            <i class="fa-solid fa-bolt"></i>
+                        </div>
+                        <h4 id="analysis-uptime" style="font-size: 18px; font-weight: 700; margin-bottom: 2px;">99.9%</h4>
+                        <p style="font-size: 10px; color: var(--text-muted); font-weight: 500;">Uptime</p>
+                    </div>
+                </div>
+
+                <!-- Event Timeline Section -->
+                <h4 style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">Event Timeline</h4>
+                
+                <div class="timeline-container" id="analysis-timeline-container" style="position: relative; padding-left: 25px; margin-bottom: 20px;">
+                    <!-- Line down the middle -->
+                    <div style="position: absolute; left: 8px; top: 10px; bottom: 10px; width: 2px; background: rgba(255,255,255,0.06);"></div>
+                    
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+            
+            <footer style="padding: 15px 20px; border-top: 1px solid var(--border-color); background: rgba(0,0,0,0.15);">
+                <a id="btn-download-pdf" href="#" target="_blank" class="btn btn-primary btn-block" style="height: 42px; border-radius: 8px; font-weight: 600; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; background: #222; border: 1px solid #444; color: white;">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span>Download History Log</span>
+                </a>
+            </footer>
+        </div>
+    </div>
+
+    <!-- DEVICE ALERTS LIST MODAL -->
+    <div id="device-alerts-modal" class="modal-wrapper">
+        <div class="modal-card" style="max-width: 800px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column;">
+            <header class="modal-header">
+                <div>
+                    <h2 id="alerts-modal-device-name" style="margin-bottom: 2px;">Device Alerts</h2>
+                    <p id="alerts-modal-device-serial" style="color: var(--text-muted); font-size: 12px; font-weight: 500;">ID: SN-908711</p>
+                </div>
+                <button id="close-device-alerts-btn" class="modal-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 20px;">
+                <div class="table-responsive" style="margin-top: 0; max-height: 60vh;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Event Type</th>
+                                <th>Message</th>
+                                <th>Status</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="device-alerts-table-body">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ALERT DETAILS RAW DATA MODAL -->
+    <div id="alert-details-modal" class="modal-wrapper">
+        <div class="modal-card" style="max-width: 500px; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+            <header class="modal-header">
+                <div>
+                    <h2 style="margin-bottom: 2px;">Alert Raw Properties</h2>
+                    <p id="details-modal-alert-id" style="color: var(--text-muted); font-size: 12px; font-weight: 500;">Feed ID: 10301</p>
+                </div>
+                <button id="close-alert-details-btn" class="modal-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 20px;">
+                <div class="alert-raw-container" id="alert-raw-properties" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); font-family: monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; color: #34d399; max-height: 50vh; overflow-y: auto;">
+                    <!-- Raw JSON populated dynamically -->
+                </div>
+            </div>
+            
+            <footer class="modal-footer">
+                <button type="button" id="btn-close-details-footer" class="btn btn-secondary">Close</button>
+            </footer>
         </div>
     </div>
 

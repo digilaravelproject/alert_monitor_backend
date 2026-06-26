@@ -8,6 +8,9 @@ let permissionsList = [];
 let levelsList = [];
 let rolesList = [];
 let locationsList = [];
+let devicesList = [];
+let selectedDeviceTypeFilter = 'All';
+let deviceTypesList = [];
 
 // DOM Elements
 const loginScreen = document.getElementById('login-screen');
@@ -32,11 +35,13 @@ const menuPermissions = document.getElementById('menu-permissions');
 const menuLevels = document.getElementById('menu-levels');
 const menuRoles = document.getElementById('menu-roles');
 const menuLocations = document.getElementById('menu-locations');
+const menuDevices = document.getElementById('menu-devices');
 const staffSection = document.getElementById('staff-section');
 const permissionsSection = document.getElementById('permissions-section');
 const levelsSection = document.getElementById('levels-section');
 const rolesSection = document.getElementById('roles-section');
 const locationsSection = document.getElementById('locations-section');
+const devicesSection = document.getElementById('devices-section');
 const permissionsTableBody = document.getElementById('permissions-table-body');
 const permissionSearchInput = document.getElementById('permission-search-input');
 const permissionRefreshBtn = document.getElementById('permission-refresh-btn');
@@ -466,11 +471,17 @@ menuLocations.addEventListener('click', (e) => {
     fetchLocations();
 });
 
+menuDevices.addEventListener('click', (e) => {
+    e.preventDefault();
+    setActiveMenu(menuDevices, devicesSection);
+    fetchDevices();
+});
+
 function setActiveMenu(menuItem, sectionItem) {
-    [menuStaff, menuPermissions, menuLevels, menuRoles, menuLocations].forEach(m => {
+    [menuStaff, menuPermissions, menuLevels, menuRoles, menuLocations, menuDevices].forEach(m => {
         if (m) m.classList.remove('active');
     });
-    [staffSection, permissionsSection, levelsSection, rolesSection, locationsSection].forEach(s => {
+    [staffSection, permissionsSection, levelsSection, rolesSection, locationsSection, devicesSection].forEach(s => {
         if (s) s.style.display = 'none';
     });
     menuItem.classList.add('active');
@@ -1443,6 +1454,868 @@ function escapeHTML(str) {
         }[tag] || tag)
     );
 }
+
+/* ==========================================================================
+   DEVICE MANAGEMENT JS LOGIC
+   ========================================================================== */
+
+// Helper to determine FontAwesome icon based on device type
+function getDeviceIconClass(type) {
+    switch (type) {
+        case 'Panic Button':
+            return 'fa-solid fa-fingerprint';
+        case 'Gunshot Sensor':
+            return 'fa-solid fa-volume-high';
+        case 'Fire Detector':
+            return 'fa-solid fa-fire-flame-curved';
+        case 'Crowd Monitor':
+            return 'fa-solid fa-users';
+        case 'High Noise Sensor':
+            return 'fa-solid fa-ear-deaf';
+        case 'Presence Radar':
+            return 'fa-solid fa-wifi';
+        case 'Vibration Tamper':
+            return 'fa-solid fa-triangle-exclamation';
+        case 'Hardware Diagnostics':
+            return 'fa-solid fa-wrench';
+        default:
+            return 'fa-solid fa-microchip';
+    }
+}
+
+// Fetch device types from server
+async function fetchDeviceTypes() {
+    try {
+        const response = await fetch(`${API_URL}/devices/types`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            deviceTypesList = resData.data;
+            renderDeviceTypeFilters();
+        }
+    } catch (err) {
+        console.error('Failed to fetch device types:', err);
+    }
+}
+
+// Render filter pills dynamically
+function renderDeviceTypeFilters() {
+    const filtersContainer = document.getElementById('device-type-filters');
+    if (!filtersContainer) return;
+    
+    let html = `<div class="filter-pill ${selectedDeviceTypeFilter === 'All' ? 'active' : ''}" onclick="setDeviceTypeFilter('All')">All</div>`;
+    
+    deviceTypesList.forEach(type => {
+        html += `<div class="filter-pill ${selectedDeviceTypeFilter === type ? 'active' : ''}" onclick="setDeviceTypeFilter('${type}')">${escapeHTML(type)}</div>`;
+    });
+    
+    filtersContainer.innerHTML = html;
+}
+
+// Expose filter click handler globally
+window.setDeviceTypeFilter = function(type) {
+    selectedDeviceTypeFilter = type;
+    renderDeviceTypeFilters();
+    fetchDevices();
+};
+
+// Populate dropdown selects in Add/Edit Device Modal
+function populateDeviceModalDropdowns() {
+    const typeSelect = document.getElementById('device-type');
+    const locSelect = document.getElementById('device-location');
+    
+    if (typeSelect) {
+        typeSelect.innerHTML = '<option value="" disabled selected>Select Device Type</option>';
+        deviceTypesList.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            typeSelect.appendChild(option);
+        });
+    }
+    
+    if (locSelect) {
+        locSelect.innerHTML = '<option value="" disabled selected>Select Location</option>';
+        locationsList.forEach(loc => {
+            if (loc.is_active) {
+                const option = document.createElement('option');
+                option.value = loc.id;
+                option.textContent = loc.name;
+                locSelect.appendChild(option);
+            }
+        });
+    }
+}
+
+// Fetch and render devices status list
+async function fetchDevices() {
+    try {
+        if (deviceTypesList.length === 0) {
+            await fetchDeviceTypes();
+        }
+
+        const response = await fetch(`${API_URL}/alerts?type=${encodeURIComponent(selectedDeviceTypeFilter)}`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        const resData = await response.json();
+        
+        if (response.ok && resData.status) {
+            devicesList = resData.data;
+            
+            // Update stats
+            document.getElementById('stat-devices-total').textContent = resData.counts.total;
+            document.getElementById('stat-devices-active').textContent = resData.counts.active;
+            document.getElementById('stat-devices-deactive').textContent = resData.counts.deactive;
+            
+            renderDevices(devicesList);
+        } else {
+            showToast(resData.error || 'Failed to fetch devices.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+        console.error(err);
+    }
+}
+
+// Render card items into the grid
+function renderDevices(devices) {
+    const container = document.getElementById('devices-cards-container');
+    if (!container) return;
+    
+    if (devices.length === 0) {
+        container.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
+                <i class="fa-solid fa-microchip" style="font-size: 48px; margin-bottom: 15px; opacity: 0.3;"></i>
+                <p>No devices registered match the criteria.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = devices.map(dev => {
+        const iconClass = getDeviceIconClass(dev.type);
+        let badgeClass = 'badge-active';
+        let badgeText = 'Active';
+        
+        if (!dev.is_active) {
+            badgeClass = 'badge-deactive';
+            badgeText = 'Deactivated';
+        } else if (dev.new_alert === 1) {
+            badgeClass = 'badge-alerting';
+            badgeText = 'Alerting';
+        }
+        
+        const batteryIcon = dev.battery_percentage >= 80 
+            ? 'fa-battery-full' 
+            : dev.battery_percentage >= 50 
+                ? 'fa-battery-three-quarters' 
+                : dev.battery_percentage >= 20 
+                    ? 'fa-battery-quarter' 
+                    : 'fa-battery-empty';
+                    
+        return `
+            <div class="device-card" id="device-card-${dev.id}">
+                <div class="device-card-header">
+                    <div class="device-card-icon-container">
+                        <i class="${iconClass}"></i>
+                    </div>
+                    <div style="position: relative;">
+                        <button class="device-options-btn" onclick="toggleDeviceDropdown(event, ${dev.id})">
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </button>
+                        <div class="device-card-dropdown" id="dropdown-${dev.id}">
+                            <div class="device-card-dropdown-item" onclick="openViewDeviceDetailsModal(${dev.id})">
+                                <i class="fa-solid fa-eye"></i> View Details
+                            </div>
+                            <div class="device-card-dropdown-item" onclick="openDeviceAlertsModal(${dev.id})">
+                                <i class="fa-solid fa-bell"></i> Alerts
+                            </div>
+                            <div class="device-card-dropdown-item" onclick="toggleDeviceStatus(${dev.id})">
+                                <i class="fa-solid ${dev.is_active ? 'fa-toggle-on' : 'fa-toggle-off'}"></i> ${dev.is_active ? 'Deactivate' : 'Activate'}
+                            </div>
+                            <div class="device-card-dropdown-item" onclick="openEditDeviceModal(${dev.id})">
+                                <i class="fa-solid fa-pen"></i> Edit Device
+                            </div>
+                            <div class="device-card-dropdown-item text-danger" onclick="deleteDevice(${dev.id})">
+                                <i class="fa-solid fa-trash"></i> Delete Device
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="device-card-type">${escapeHTML(dev.type)}</div>
+                <div class="device-card-serial">ID: ${escapeHTML(dev.serial_number)}</div>
+                
+                <div style="margin-bottom: 12px;">
+                    <span class="badge ${badgeClass}">${badgeText}</span>
+                </div>
+                
+                <div class="device-card-zone">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>${escapeHTML(dev.location ? dev.location.name : 'Unknown Location')}</span>
+                </div>
+                
+                <div class="device-card-battery">
+                    <i class="fa-solid ${batteryIcon}"></i>
+                    <span>${dev.battery_percentage}% Battery</span>
+                </div>
+                
+                <div class="device-card-owner">
+                    <div class="device-card-owner-title">Location Admin</div>
+                    <div>${escapeHTML(dev.admin ? dev.admin.name : 'Unassigned')}</div>
+                    <div style="font-size: 11px; opacity: 0.8;">${escapeHTML(dev.admin ? dev.admin.email : 'No Contact')}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Toggle active status of a single card's action menu
+window.toggleDeviceDropdown = function(event, deviceId) {
+    event.stopPropagation();
+    document.querySelectorAll('.device-card-dropdown').forEach(d => {
+        if (d.id !== `dropdown-${deviceId}`) {
+            d.classList.remove('active');
+        }
+    });
+    
+    const dropdown = document.getElementById(`dropdown-${deviceId}`);
+    if (dropdown) {
+        dropdown.classList.toggle('active');
+    }
+};
+
+// Global click handler to dismiss open dropdown menus
+document.addEventListener('click', () => {
+    document.querySelectorAll('.device-card-dropdown').forEach(d => {
+        d.classList.remove('active');
+    });
+});
+
+// Register / Edit Modal Toggles
+window.openAddDeviceModal = function() {
+    populateDeviceModalDropdowns();
+    document.getElementById('device-id').value = '';
+    document.getElementById('device-name').value = '';
+    document.getElementById('device-serial').value = '';
+    document.getElementById('device-serial').disabled = false;
+    document.getElementById('device-type').value = '';
+    document.getElementById('device-location').value = '';
+    document.getElementById('device-modal-title').textContent = 'Register Device';
+    document.getElementById('device-submit-btn').innerHTML = 'Save & Register';
+    document.getElementById('device-modal').classList.add('open');
+};
+
+window.openEditDeviceModal = function(id) {
+    const dev = devicesList.find(d => d.id === id);
+    if (!dev) return;
+    
+    populateDeviceModalDropdowns();
+    document.getElementById('device-id').value = dev.id;
+    document.getElementById('device-name').value = dev.name;
+    document.getElementById('device-serial').value = dev.serial_number;
+    document.getElementById('device-serial').disabled = true;
+    document.getElementById('device-type').value = dev.type;
+    document.getElementById('device-location').value = dev.location ? dev.location.id : '';
+    document.getElementById('device-modal-title').textContent = 'Edit Device';
+    document.getElementById('device-submit-btn').innerHTML = 'Update Device';
+    document.getElementById('device-modal').classList.add('open');
+};
+
+window.closeDeviceModal = function() {
+    document.getElementById('device-modal').classList.remove('open');
+};
+
+// Toggle device active state (Active/Deactive)
+window.toggleDeviceStatus = async function(id) {
+    try {
+        const response = await fetch(`${API_URL}/devices/${id}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            showToast(resData.message || 'Device status updated.', 'success');
+            fetchDevices();
+        } else {
+            showToast(resData.error || 'Failed to toggle device status.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error.', 'error');
+        console.error(err);
+    }
+};
+
+// Delete Device
+window.deleteDevice = async function(id) {
+    if (!confirm('Are you sure you want to delete this device? This will also archive its data records.')) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/devices/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            showToast('Device deleted successfully!', 'success');
+            fetchDevices();
+        } else {
+            showToast(resData.error || 'Failed to delete device.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error.', 'error');
+        console.error(err);
+    }
+};
+
+// Device details diagnostics Modal state
+let currentViewDeviceId = null;
+
+window.openViewDeviceDetailsModal = function(id) {
+    const dev = devicesList.find(d => d.id === id);
+    if (!dev) return;
+    
+    currentViewDeviceId = id;
+    
+    document.getElementById('detail-device-type').textContent = dev.type;
+    document.getElementById('detail-device-serial').textContent = `ID: ${dev.serial_number}`;
+    
+    const statusBadge = document.getElementById('detail-device-status');
+    statusBadge.className = 'badge';
+    if (!dev.is_active) {
+        statusBadge.classList.add('badge-deactive');
+        statusBadge.textContent = 'DEACTIVE';
+    } else if (dev.new_alert === 1) {
+        statusBadge.classList.add('badge-alerting');
+        statusBadge.textContent = dev.is_acknowledged === 1 ? 'ACKNOWLEDGED ALERT' : 'ALERTING';
+    } else {
+        statusBadge.classList.add('badge-active');
+        statusBadge.textContent = 'ACTIVE';
+    }
+    
+    let signalText = 'Excellent';
+    let signalColor = '#2ecc71';
+    if (dev.latest_event && dev.latest_event.rssi) {
+        const rssiVal = parseInt(dev.latest_event.rssi, 10);
+        if (rssiVal > -60) {
+            signalText = 'Excellent';
+            signalColor = '#2ecc71';
+        } else if (rssiVal > -80) {
+            signalText = 'Good';
+            signalColor = '#f1c40f';
+        } else {
+            signalText = 'Weak';
+            signalColor = '#e74c3c';
+        }
+    }
+    const signalEl = document.getElementById('detail-signal-strength');
+    signalEl.textContent = signalText;
+    signalEl.style.color = signalColor;
+    
+    document.getElementById('detail-battery-level').textContent = `${dev.battery_percentage}%`;
+    document.getElementById('detail-assigned-zone').textContent = dev.location ? dev.location.name : 'N/A';
+    
+    const dismissBtn = document.getElementById('btn-dismiss-alert');
+    const ackBtn = document.getElementById('btn-acknowledge-alert');
+    
+    if (dev.is_active && dev.new_alert === 1) {
+        dismissBtn.style.display = 'block';
+        if (dev.is_acknowledged === 1) {
+            ackBtn.style.display = 'none';
+        } else {
+            ackBtn.style.display = 'block';
+        }
+    } else {
+        dismissBtn.style.display = 'none';
+        ackBtn.style.display = 'none';
+    }
+    
+    document.getElementById('device-details-modal').classList.add('open');
+};
+
+window.closeViewDeviceDetailsModal = function() {
+    document.getElementById('device-details-modal').classList.remove('open');
+};
+
+// Open analysis log modal
+window.openDeviceAnalysisModal = async function(id) {
+    try {
+        const response = await fetch(`${API_URL}/devices/${id}/analysis`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        const resData = await response.json();
+        if (!response.ok || !resData.status) {
+            showToast(resData.error || 'Failed to retrieve device analysis.', 'error');
+            return;
+        }
+        
+        const analysis = resData.data;
+        
+        document.getElementById('analysis-device-type').textContent = analysis.device.type;
+        document.getElementById('analysis-device-serial').textContent = `ID: ${analysis.device.serial_number}`;
+        
+        document.getElementById('analysis-total-alerts').textContent = analysis.total_alerts;
+        document.getElementById('analysis-avg-response').textContent = analysis.avg_response;
+        document.getElementById('analysis-uptime').textContent = analysis.uptime;
+        
+        const downloadBtn = document.getElementById('btn-download-pdf');
+        if (downloadBtn) {
+            downloadBtn.href = analysis.pdf_url;
+        }
+        
+        const timelineContainer = document.getElementById('analysis-timeline-container');
+        if (timelineContainer) {
+            let html = `<div style="position: absolute; left: 8px; top: 10px; bottom: 10px; width: 2px; background: rgba(255,255,255,0.06);"></div>`;
+            
+            if (analysis.timeline.length === 0) {
+                html += `
+                    <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px 0;">
+                        No event logs recorded.
+                    </div>
+                `;
+            } else {
+                analysis.timeline.forEach(event => {
+                    let markerClass = 'marker-triggered';
+                    let markerIcon = 'fa-bell';
+                    
+                    if (event.event_type === 'Alert Triggered') {
+                        markerClass = 'marker-triggered';
+                        markerIcon = 'fa-bell';
+                    } else if (event.event_type === 'Alert Acknowledged') {
+                        markerClass = 'marker-acknowledged';
+                        markerIcon = 'fa-eye';
+                    } else if (event.event_type === 'Alert Dismissed') {
+                        markerClass = 'marker-dismissed';
+                        markerIcon = 'fa-xmark';
+                    } else if (event.event_type === 'Alert Resolved') {
+                        markerClass = 'marker-resolved';
+                        markerIcon = 'fa-check';
+                    }
+                    
+                    html += `
+                        <div class="timeline-item">
+                            <div class="timeline-marker ${markerClass}">
+                                <i class="fa-solid ${markerIcon}"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="timeline-header">
+                                    <span class="timeline-title">${escapeHTML(event.event_type)}</span>
+                                    <span class="timeline-time">${escapeHTML(event.time)}</span>
+                                </div>
+                                <div class="timeline-desc">${escapeHTML(event.description)}</div>
+                                <div class="timeline-actor">
+                                    <i class="fa-solid ${event.actor.startsWith('Sensor') ? 'fa-microchip' : event.actor.startsWith('System') ? 'fa-robot' : 'fa-user'}"></i>
+                                    <span>${escapeHTML(event.actor)}</span>
+                                </div>
+                                ${event.info ? `<div class="timeline-info-box">${escapeHTML(event.info)}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            timelineContainer.innerHTML = html;
+        }
+        
+        document.getElementById('device-analysis-modal').classList.add('open');
+    } catch (err) {
+        showToast('Failed to load device analysis data.', 'error');
+        console.error(err);
+    }
+};
+
+window.closeDeviceAnalysisModal = function() {
+    document.getElementById('device-analysis-modal').classList.remove('open');
+};
+
+// Add / Edit Form submit binding
+document.getElementById('device-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('device-id').value;
+    const name = document.getElementById('device-name').value.trim();
+    const serial_number = document.getElementById('device-serial').value.trim();
+    const type = document.getElementById('device-type').value;
+    const location_id = document.getElementById('device-location').value;
+    
+    const submitBtn = document.getElementById('device-submit-btn');
+    const originalHTML = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<div class="loader-spinner"></div> <span>Saving...</span>`;
+    
+    const url = id ? `${API_URL}/devices/${id}` : `${API_URL}/devices`;
+    const method = id ? 'PUT' : 'POST';
+    
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ name, serial_number, type, location_id })
+        });
+        
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            showToast(id ? 'Device updated successfully!' : 'Device registered successfully!', 'success');
+            closeDeviceModal();
+            fetchDevices();
+        } else {
+            showToast(resData.error || 'Failed to save device.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error.', 'error');
+        console.error(err);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalHTML;
+    }
+});
+
+// Search input keyup binding
+document.getElementById('device-search-input').addEventListener('keyup', () => {
+    const query = document.getElementById('device-search-input').value.toLowerCase().trim();
+    if (!query) {
+        renderDevices(devicesList);
+        return;
+    }
+    
+    const filtered = devicesList.filter(dev => {
+        const name = (dev.name || '').toLowerCase();
+        const serial = (dev.serial_number || '').toLowerCase();
+        const zone = (dev.location ? dev.location.name : '').toLowerCase();
+        const type = (dev.type || '').toLowerCase();
+        return name.includes(query) || serial.includes(query) || zone.includes(query) || type.includes(query);
+    });
+    
+    renderDevices(filtered);
+});
+
+// Refresh button binding
+document.getElementById('device-refresh-btn').addEventListener('click', () => {
+    fetchDevices();
+    showToast('Devices list refreshed.', 'success');
+});
+
+// Dismiss / Acknowledge alert click bindings
+document.getElementById('btn-dismiss-alert').addEventListener('click', async () => {
+    if (!currentViewDeviceId) return;
+    try {
+        const response = await fetch(`${API_URL}/devices/${currentViewDeviceId}/remove-alert`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            showToast('Alert dismissed successfully!', 'success');
+            closeViewDeviceDetailsModal();
+            fetchDevices();
+        } else {
+            showToast(resData.error || 'Failed to dismiss alert.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error.', 'error');
+    }
+});
+
+document.getElementById('btn-acknowledge-alert').addEventListener('click', async () => {
+    if (!currentViewDeviceId) return;
+    try {
+        const response = await fetch(`${API_URL}/devices/${currentViewDeviceId}/acknowledge-alert`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            showToast('Alert acknowledged successfully!', 'success');
+            closeViewDeviceDetailsModal();
+            fetchDevices();
+        } else {
+            showToast(resData.error || 'Failed to acknowledge alert.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error.', 'error');
+    }
+});
+
+// Diagnostics Modal -> Open Analysis Modal link binding
+document.getElementById('btn-full-analysis').addEventListener('click', () => {
+    if (!currentViewDeviceId) return;
+    closeViewDeviceDetailsModal();
+    openDeviceAnalysisModal(currentViewDeviceId);
+});
+
+// Modal Close Button bindings
+document.getElementById('open-device-modal-btn').addEventListener('click', openAddDeviceModal);
+document.getElementById('close-device-modal-btn').addEventListener('click', closeDeviceModal);
+document.getElementById('cancel-device-btn').addEventListener('click', closeDeviceModal);
+
+document.getElementById('close-device-details-btn').addEventListener('click', closeViewDeviceDetailsModal);
+document.getElementById('close-device-analysis-btn').addEventListener('click', closeDeviceAnalysisModal);
+
+document.getElementById('close-device-alerts-btn').addEventListener('click', closeDeviceAlertsModal);
+document.getElementById('close-alert-details-btn').addEventListener('click', closeAlertDetailsModal);
+document.getElementById('btn-close-details-footer').addEventListener('click', closeAlertDetailsModal);
+
+// Modal Backdrop Close bindings
+document.getElementById('device-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('device-modal')) {
+        closeDeviceModal();
+    }
+});
+document.getElementById('device-details-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('device-details-modal')) {
+        closeViewDeviceDetailsModal();
+    }
+});
+document.getElementById('device-analysis-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('device-analysis-modal')) {
+        closeDeviceAnalysisModal();
+    }
+});
+document.getElementById('device-alerts-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('device-alerts-modal')) {
+        closeDeviceAlertsModal();
+    }
+});
+document.getElementById('alert-details-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('alert-details-modal')) {
+        closeAlertDetailsModal();
+    }
+});
+
+/* ==========================================================================
+   ALERTS LIST AND DETAILS JS LOGIC
+   ========================================================================== */
+
+let currentAlertsDeviceId = null;
+let currentAlertsList = [];
+
+async function openDeviceAlertsModal(deviceId) {
+    const dev = devicesList.find(d => d.id === deviceId);
+    if (!dev) return;
+    
+    currentAlertsDeviceId = deviceId;
+    
+    document.getElementById('alerts-modal-device-name').textContent = `${dev.type} - Alerts`;
+    document.getElementById('alerts-modal-device-serial').textContent = `ID: ${dev.serial_number}`;
+    
+    const tableBody = document.getElementById('device-alerts-table-body');
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="5" style="text-align: center; padding: 20px;">
+                <div class="loader-spinner" style="margin: 0 auto 10px auto;"></div>
+                <span>Loading alerts data...</span>
+            </td>
+        </tr>
+    `;
+    
+    document.getElementById('device-alerts-modal').classList.add('open');
+    
+    await fetchAndRenderAlertsList(deviceId);
+}
+
+async function fetchAndRenderAlertsList(deviceId) {
+    try {
+        const response = await fetch(`${API_URL}/devices/${deviceId}/alerts`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            currentAlertsList = resData.data.alerts;
+            renderAlertsList(deviceId, currentAlertsList);
+        } else {
+            showToast(resData.error || 'Failed to fetch device alerts.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error while fetching alerts.', 'error');
+        console.error(err);
+    }
+}
+
+function renderAlertsList(deviceId, alerts) {
+    const tableBody = document.getElementById('device-alerts-table-body');
+    if (!tableBody) return;
+    
+    if (alerts.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                    <i class="fa-solid fa-bell-slash" style="font-size: 24px; margin-bottom: 10px; opacity: 0.3;"></i>
+                    <p>No alert logs recorded for this device.</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tableBody.innerHTML = alerts.map(alert => {
+        const formattedDate = alert.insert_date 
+            ? new Date(alert.insert_date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+              })
+            : 'N/A';
+            
+        let statusBadgeClass = 'badge-alerting';
+        let statusText = 'Active';
+        
+        if (alert.status === 'DISMISSED') {
+            statusBadgeClass = 'badge-active';
+            statusText = 'Dismissed';
+        } else if (alert.status === 'ACKNOWLEDGED') {
+            statusBadgeClass = 'badge-deactive';
+            statusText = 'Acknowledged';
+        }
+        
+        let actionButtonsHtml = '';
+        if (alert.status === 'ACTIVE') {
+            actionButtonsHtml += `
+                <button class="alerts-action-btn" style="background: rgba(46,204,113,0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.3); margin-right: 4px;" onclick="acknowledgeAlertInList(event, ${deviceId}, ${alert.id})">
+                    <i class="fa-solid fa-check"></i> Ack
+                </button>
+                <button class="alerts-action-btn" style="background: rgba(231,76,60,0.15); color: #e74c3c; border: 1px solid rgba(231,76,60,0.3); margin-right: 4px;" onclick="dismissAlertInList(event, ${deviceId}, ${alert.id})">
+                    <i class="fa-solid fa-xmark"></i> Dismiss
+                </button>
+            `;
+        } else if (alert.status === 'ACKNOWLEDGED') {
+            actionButtonsHtml += `
+                <button class="alerts-action-btn" style="background: rgba(231,76,60,0.15); color: #e74c3c; border: 1px solid rgba(231,76,60,0.3); margin-right: 4px;" onclick="dismissAlertInList(event, ${deviceId}, ${alert.id})">
+                    <i class="fa-solid fa-xmark"></i> Dismiss
+                </button>
+            `;
+        } else {
+            actionButtonsHtml += `
+                <span style="color: #2ecc71; font-size: 11px; margin-right: 8px; font-weight: 600;"><i class="fa-solid fa-circle-check"></i> Closed</span>
+            `;
+        }
+        
+        return `
+            <tr>
+                <td>${formattedDate}</td>
+                <td><span class="badge badge-level" style="text-transform: capitalize;">${escapeHTML(alert.ev)}</span></td>
+                <td>${escapeHTML(alert.msg)}</td>
+                <td><span class="badge ${statusBadgeClass}">${statusText}</span></td>
+                <td style="text-align: right; white-space: nowrap;">
+                    ${actionButtonsHtml}
+                    <button class="alerts-action-btn btn-view" style="margin-right: 4px;" onclick="openAlertDetailsModal(${alert.id})">
+                        <i class="fa-solid fa-code"></i> Details
+                    </button>
+                    <button class="alerts-action-btn btn-timeline" onclick="openDeviceAnalysisModalFromAlerts(${alert.id})">
+                        <i class="fa-solid fa-stopwatch"></i> Timeline
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function closeDeviceAlertsModal() {
+    document.getElementById('device-alerts-modal').classList.remove('open');
+}
+
+async function acknowledgeAlertInList(event, deviceId, feedId) {
+    event.stopPropagation();
+    try {
+        const response = await fetch(`${API_URL}/alerts/${feedId}/acknowledge`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            showToast('Alert acknowledged successfully!', 'success');
+            await fetchAndRenderAlertsList(deviceId);
+            fetchDevices();
+        } else {
+            showToast(resData.error || 'Failed to acknowledge alert.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error.', 'error');
+    }
+}
+
+async function dismissAlertInList(event, deviceId, feedId) {
+    event.stopPropagation();
+    try {
+        const response = await fetch(`${API_URL}/alerts/${feedId}/remove`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            showToast('Alert dismissed successfully!', 'success');
+            await fetchAndRenderAlertsList(deviceId);
+            fetchDevices();
+        } else {
+            showToast(resData.error || 'Failed to dismiss alert.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error.', 'error');
+    }
+}
+
+function openAlertDetailsModal(alertId) {
+    const alert = currentAlertsList.find(a => a.id === alertId);
+    if (!alert) return;
+    
+    document.getElementById('details-modal-alert-id').textContent = `Feed ID: ${alert.id}`;
+    
+    const jsonStr = JSON.stringify(alert.raw_data, null, 4);
+    document.getElementById('alert-raw-properties').textContent = jsonStr;
+    
+    document.getElementById('alert-details-modal').classList.add('open');
+}
+
+function closeAlertDetailsModal() {
+    document.getElementById('alert-details-modal').classList.remove('open');
+}
+
+function openDeviceAnalysisModalFromAlerts(alertId) {
+    closeDeviceAlertsModal();
+    openDeviceAnalysisModal(alertId);
+}
+
+// Expose device functions globally
+window.openViewDeviceDetailsModal = openViewDeviceDetailsModal;
+window.closeViewDeviceDetailsModal = closeViewDeviceDetailsModal;
+window.openEditDeviceModal = openEditDeviceModal;
+window.deleteDevice = deleteDevice;
+window.openDeviceAnalysisModal = openDeviceAnalysisModal;
+window.closeDeviceAnalysisModal = closeDeviceAnalysisModal;
+window.openDeviceAlertsModal = openDeviceAlertsModal;
+window.closeDeviceAlertsModal = closeDeviceAlertsModal;
+window.acknowledgeAlertInList = acknowledgeAlertInList;
+window.dismissAlertInList = dismissAlertInList;
+window.openAlertDetailsModal = openAlertDetailsModal;
+window.closeAlertDetailsModal = closeAlertDetailsModal;
+window.openDeviceAnalysisModalFromAlerts = openDeviceAnalysisModalFromAlerts;
 
 // Initial Bootstrapping
 window.addEventListener('DOMContentLoaded', checkAuth);

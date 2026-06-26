@@ -240,6 +240,18 @@ async function updateSchema() {
                 );
                 PRINT 'Table dismissed_alerts created.';
             END
+
+            -- Create acknowledged_alerts table if it does not exist
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[acknowledged_alerts]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[acknowledged_alerts] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    feed_id BIGINT NOT NULL,
+                    acknowledged_at DATETIME DEFAULT GETDATE(),
+                    acknowledged_by NVARCHAR(100) NULL
+                );
+                PRINT 'Table acknowledged_alerts created.';
+            END
         `);
 
         console.log('Database migration completed successfully.');

@@ -78,7 +78,12 @@ router.get('/devices/search', authenticateToken, deviceController.search);
 router.post('/devices/:id/toggle', authenticateToken, deviceController.toggleStatus);
 router.get('/devices/:id', authenticateToken, deviceController.getById);
 router.put('/devices/:id', authenticateToken, validateUpdateDevice, deviceController.update);
+router.delete('/devices/:id', authenticateToken, deviceController.delete);
 router.post('/devices/:id/remove-alert', authenticateToken, deviceController.removeAlert);
 router.post('/alerts/:feedId/remove', authenticateToken, deviceController.removeAlertByFeedId);
+router.post('/devices/:id/acknowledge-alert', authenticateToken, deviceController.acknowledgeAlert);
+router.post('/alerts/:feedId/acknowledge', authenticateToken, deviceController.acknowledgeAlertByFeedId);
+router.get('/devices/:id/alerts', authenticateToken, deviceController.getAlertsForDevice);
+router.get('/devices/:id/analysis', authenticateToken, deviceController.getAnalysis);
 
 module.exports = router;
