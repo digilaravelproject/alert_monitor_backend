@@ -1,49 +1,44 @@
-const roleRepository = require('../repositories/roleRepository');
+const levelRepository = require('../repositories/levelRepository');
 
-class RoleController {
+class LevelController {
     async create(req, res) {
         try {
             if (req.user.role !== 'Admin') {
                 return res.status(403).json({
                     status: false,
-                    error: 'Forbidden: Admin privileges required'
+                    error: 'Forbidden: Admin privileges required to create levels'
                 });
             }
 
-            const { name, description, permissions } = req.body;
+            const { name, description, sla_window, cycle_count, response_logic, color } = req.body;
             if (!name || typeof name !== 'string' || name.trim() === '') {
                 return res.status(400).json({
                     status: false,
-                    error: 'Role name is required'
+                    error: 'Level name is required'
                 });
             }
 
-            const existing = await roleRepository.findByName(req.user.id, name);
+            const existing = await levelRepository.findByName(req.user.id, name);
             if (existing) {
                 return res.status(400).json({
                     status: false,
-                    error: 'Role name already exists'
+                    error: 'Level name already exists'
                 });
             }
 
-            // Create role
-            const newRole = await roleRepository.create({
+            const newLevel = await levelRepository.create({
                 name,
                 description,
+                sla_window,
+                cycle_count,
+                response_logic,
+                color,
                 admin_id: req.user.id
             });
 
-            // Assign permissions
-            if (Array.isArray(permissions)) {
-                await roleRepository.assignPermissions(newRole.id, permissions);
-            }
-
-            // Fetch final role with permissions
-            const roleWithPerms = await roleRepository.getById(newRole.id, req.user.id);
-
             res.status(201).json({
                 status: true,
-                data: roleWithPerms
+                data: newLevel
             });
         } catch (error) {
             res.status(500).json({
@@ -66,10 +61,16 @@ class RoleController {
             }
 
             const adminId = isSuperAdmin ? null : req.user.id;
-            const roles = await roleRepository.getAll(adminId, isSuperAdmin);
+            const levels = await levelRepository.getAll(adminId, isSuperAdmin);
+
             res.status(200).json({
                 status: true,
-                data: roles
+                counts: {
+                    levels: levels.length,
+                    alerts: 1, // static count as requested
+                    sla: '100%' // static SLA as requested
+                },
+                data: levels
             });
         } catch (error) {
             res.status(500).json({
@@ -100,10 +101,11 @@ class RoleController {
             }
 
             const adminId = isSuperAdmin ? null : req.user.id;
-            const roles = await roleRepository.search(adminId, query, isSuperAdmin);
+            const levels = await levelRepository.search(adminId, query, isSuperAdmin);
+
             res.status(200).json({
                 status: true,
-                data: roles
+                data: levels
             });
         } catch (error) {
             res.status(500).json({
@@ -127,17 +129,18 @@ class RoleController {
 
             const { id } = req.params;
             const adminId = isSuperAdmin ? null : req.user.id;
-            const role = await roleRepository.getById(id, adminId, isSuperAdmin);
-            if (!role) {
+            const level = await levelRepository.getById(id, adminId, isSuperAdmin);
+
+            if (!level) {
                 return res.status(404).json({
                     status: false,
-                    error: 'Role not found'
+                    error: 'Level not found'
                 });
             }
 
             res.status(200).json({
                 status: true,
-                data: role
+                data: level
             });
         } catch (error) {
             res.status(500).json({
@@ -160,21 +163,22 @@ class RoleController {
             }
 
             const { id } = req.params;
-            const { name, description, permissions } = req.body;
+            const { name, description, sla_window, cycle_count, response_logic, color } = req.body;
 
             if (!name || typeof name !== 'string' || name.trim() === '') {
                 return res.status(400).json({
                     status: false,
-                    error: 'Role name is required'
+                    error: 'Level name is required'
                 });
             }
 
             const adminId = isSuperAdmin ? null : req.user.id;
-            const existing = await roleRepository.getById(id, adminId, isSuperAdmin);
+            const existing = await levelRepository.getById(id, adminId, isSuperAdmin);
+
             if (!existing) {
                 return res.status(404).json({
                     status: false,
-                    error: 'Role not found or access denied'
+                    error: 'Level not found or access denied'
                 });
             }
 
@@ -182,33 +186,31 @@ class RoleController {
             if (existing.admin_id === null && !isSuperAdmin) {
                 return res.status(403).json({
                     status: false,
-                    error: 'Forbidden: Default system roles can only be updated by Super Admin'
+                    error: 'Forbidden: Default system levels can only be updated by Super Admin'
                 });
             }
 
-            const duplicate = await roleRepository.findByNameExcludingId(adminId, name, id);
+            const duplicate = await levelRepository.findByNameExcludingId(adminId, name, id);
             if (duplicate) {
                 return res.status(400).json({
                     status: false,
-                    error: 'Role name already exists'
+                    error: 'Level name already exists'
                 });
             }
 
-            // Update role details
-            await roleRepository.update(id, adminId, { name, description }, isSuperAdmin);
-
-            // Update permissions
-            if (Array.isArray(permissions)) {
-                await roleRepository.assignPermissions(id, permissions);
-            }
-
-            // Fetch final updated role
-            const updatedRole = await roleRepository.getById(id, adminId, isSuperAdmin);
+            const updated = await levelRepository.update(id, {
+                name,
+                description,
+                sla_window,
+                cycle_count,
+                response_logic,
+                color
+            });
 
             res.status(200).json({
                 status: true,
-                message: 'Role updated successfully',
-                data: updatedRole
+                message: 'Level updated successfully',
+                data: updated
             });
         } catch (error) {
             res.status(500).json({
@@ -232,11 +234,12 @@ class RoleController {
 
             const { id } = req.params;
             const adminId = isSuperAdmin ? null : req.user.id;
-            const existing = await roleRepository.getById(id, adminId, isSuperAdmin);
+            const existing = await levelRepository.getById(id, adminId, isSuperAdmin);
+
             if (!existing) {
                 return res.status(404).json({
                     status: false,
-                    error: 'Role not found or access denied'
+                    error: 'Level not found or access denied'
                 });
             }
 
@@ -244,14 +247,15 @@ class RoleController {
             if (existing.admin_id === null && !isSuperAdmin) {
                 return res.status(403).json({
                     status: false,
-                    error: 'Forbidden: Default system roles can only be deleted by Super Admin'
+                    error: 'Forbidden: Default system levels can only be deleted by Super Admin'
                 });
             }
 
-            await roleRepository.delete(id, adminId, isSuperAdmin);
+            await levelRepository.delete(id);
+
             res.status(200).json({
                 status: true,
-                message: 'Role deleted successfully'
+                message: 'Level deleted successfully'
             });
         } catch (error) {
             res.status(500).json({
@@ -262,4 +266,4 @@ class RoleController {
     }
 }
 
-module.exports = new RoleController();
+module.exports = new LevelController();

@@ -111,6 +111,52 @@ async function updateSchema() {
             IF NOT EXISTS (SELECT * FROM roles WHERE name = 'Security Guard' AND admin_id IS NULL) INSERT INTO roles (name, description, admin_id) VALUES ('Security Guard', 'Default Security Guard', NULL);
             IF NOT EXISTS (SELECT * FROM roles WHERE name = 'Manager' AND admin_id IS NULL) INSERT INTO roles (name, description, admin_id) VALUES ('Manager', 'Default Security Manager', NULL);
             IF NOT EXISTS (SELECT * FROM roles WHERE name = 'Supervisor' AND admin_id IS NULL) INSERT INTO roles (name, description, admin_id) VALUES ('Supervisor', 'Default Operations Supervisor', NULL);
+
+            -- Create levels table
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[levels]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[levels] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    name NVARCHAR(100) NOT NULL,
+                    description NVARCHAR(255) NULL,
+                    sla_window NVARCHAR(50) NULL,
+                    cycle_count NVARCHAR(50) NULL,
+                    response_logic NVARCHAR(50) NULL,
+                    color NVARCHAR(50) NULL,
+                    admin_id INT NULL,
+                    created_at DATETIME DEFAULT GETDATE()
+                );
+                PRINT 'Table levels created.';
+            END
+
+            -- Check and add level_id column to users table
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[users]') AND name = 'level_id')
+            BEGIN
+                ALTER TABLE [dbo].[users] ADD level_id INT NULL;
+                ALTER TABLE [dbo].[users] ADD CONSTRAINT FK_users_level_id FOREIGN KEY (level_id) REFERENCES levels(id) ON DELETE SET NULL;
+                PRINT 'Added level_id column to users.';
+            END
+            ELSE
+            BEGIN
+                PRINT 'level_id column already exists.';
+            END
+
+            -- Seed default system levels (admin_id is NULL)
+            IF NOT EXISTS (SELECT * FROM levels WHERE name = 'Level 1 (Critical)' AND admin_id IS NULL) 
+                INSERT INTO levels (name, description, sla_window, cycle_count, response_logic, color, admin_id) 
+                VALUES ('Level 1 (Critical)', 'Critical Priority Protocol', '5m', '3x', 'Immediate', 'red', NULL);
+                
+            IF NOT EXISTS (SELECT * FROM levels WHERE name = 'Level 2 (High)' AND admin_id IS NULL) 
+                INSERT INTO levels (name, description, sla_window, cycle_count, response_logic, color, admin_id) 
+                VALUES ('Level 2 (High)', 'High Priority Protocol', '15m', '3x', 'Immediate', 'orange', NULL);
+
+            IF NOT EXISTS (SELECT * FROM levels WHERE name = 'Level 3 (Medium)' AND admin_id IS NULL) 
+                INSERT INTO levels (name, description, sla_window, cycle_count, response_logic, color, admin_id) 
+                VALUES ('Level 3 (Medium)', 'Medium Priority Protocol', '30m', '3x', 'Immediate', 'blue', NULL);
+
+            IF NOT EXISTS (SELECT * FROM levels WHERE name = 'Level 4 (Information)' AND admin_id IS NULL) 
+                INSERT INTO levels (name, description, sla_window, cycle_count, response_logic, color, admin_id) 
+                VALUES ('Level 4 (Information)', 'Information Priority Protocol', '1h', '3x', 'Immediate', 'grey', NULL);
         `);
 
         console.log('Database migration completed successfully.');

@@ -3,6 +3,7 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const permissionController = require('../controllers/permissionController');
 const roleController = require('../controllers/roleController');
+const levelController = require('../controllers/levelController');
 const { authenticateToken } = require('../middlewares/authMiddleware');
 const { validateAddOrUpdateUser, validateVerifyOtp } = require('../validations/userValidation');
 
@@ -48,5 +49,13 @@ router.get('/roles/search', authenticateToken, roleController.search);
 router.get('/roles/:id', authenticateToken, roleController.getById);
 router.put('/roles/:id', authenticateToken, roleController.update);
 router.delete('/roles/:id', authenticateToken, roleController.delete);
+
+// Levels APIs (requires auth)
+router.post('/levels', authenticateToken, levelController.create);
+router.get('/levels', authenticateToken, levelController.getAll);
+router.get('/levels/search', authenticateToken, levelController.search);
+router.get('/levels/:id', authenticateToken, levelController.getById);
+router.put('/levels/:id', authenticateToken, levelController.update);
+router.delete('/levels/:id', authenticateToken, levelController.delete);
 
 module.exports = router;

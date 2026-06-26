@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 const userRepository = require('../repositories/userRepository');
 const roleRepository = require('../repositories/roleRepository');
+const levelRepository = require('../repositories/levelRepository');
 const { normalizePhoneNumber, extractTenDigits } = require('../utils/helper');
 
 class ServiceError extends Error {
@@ -46,11 +47,22 @@ class UserService {
             }
         }
 
+        let levelId = null;
+        const levelStr = String(access_level).trim();
+        if (/^\d+$/.test(levelStr)) {
+            levelId = parseInt(levelStr, 10);
+        } else {
+            const dbLevel = await levelRepository.findByName(adminId, levelStr);
+            if (dbLevel) {
+                levelId = dbLevel.id;
+            }
+        }
+
         const newUser = await userRepository.create({
             name: name.trim(),
             phone_number: normalizedPhone,
             role_id: roleId,
-            access_level: access_level.trim(),
+            level_id: levelId,
             location: location.trim(),
             created_at: new Date(),
             admin_id: adminId,
@@ -109,8 +121,14 @@ class UserService {
         await userRepository.clearOtp(user.id);
 
         let permissions = [];
-        if (user.role !== 'Admin' && user.role_id) {
-            permissions = await userRepository.getRolePermissions(user.role_id);
+        let level = null;
+        if (user.role !== 'Admin') {
+            if (user.role_id) {
+                permissions = await userRepository.getRolePermissions(user.role_id);
+            }
+            if (user.level_id) {
+                level = await userRepository.getLevelById(user.level_id);
+            }
         }
 
         const verifiedUser = {
@@ -120,7 +138,7 @@ class UserService {
             role: user.role,
             access_level: user.access_level,
             location: user.location,
-            ...(user.role !== 'Admin' && { permissions })
+            ...(user.role !== 'Admin' && { permissions, level })
         };
 
         // Generate Access Token (JWT)
@@ -243,19 +261,31 @@ class UserService {
             throw new ServiceError('Mobile number is already registered', 400);
         }
 
+        const staffOwnerAdminId = checkResult[0].admin_id;
         let roleId = null;
         const roleStr = String(role).trim();
         if (/^\d+$/.test(roleStr)) {
             roleId = parseInt(roleStr, 10);
         } else {
-            const dbRole = await roleRepository.findByName(adminId, roleStr);
+            const dbRole = await roleRepository.findByName(staffOwnerAdminId, roleStr);
             if (dbRole) {
                 roleId = dbRole.id;
             }
         }
 
+        let levelId = null;
+        const levelStr = String(access_level).trim();
+        if (/^\d+$/.test(levelStr)) {
+            levelId = parseInt(levelStr, 10);
+        } else {
+            const dbLevel = await levelRepository.findByName(staffOwnerAdminId, levelStr);
+            if (dbLevel) {
+                levelId = dbLevel.id;
+            }
+        }
+
         // Update record
-        const updatedStaff = await userRepository.updateStaff(staffId, name, normalizedPhone, roleId, access_level, location);
+        const updatedStaff = await userRepository.updateStaff(staffId, name, normalizedPhone, roleId, levelId, location);
         return updatedStaff;
     }
 

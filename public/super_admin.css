@@ -1003,3 +1003,55 @@ input:checked + .slider:before {
     color: #34d399;
     border: 1px solid rgba(16, 185, 129, 0.3);
 }
+
+/* Levels and Roles layout additions */
+.badge-owner {
+    background-color: rgba(99, 102, 241, 0.12);
+    color: #c7d2fe;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.badge-system {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #9ca3af;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.permissions-checkbox-grid {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.permission-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-main);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: var(--transition-fast);
+}
+
+.permission-checkbox-item:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.permission-checkbox-item input {
+    width: auto !important;
+    cursor: pointer;
+    margin: 0;
+}
+

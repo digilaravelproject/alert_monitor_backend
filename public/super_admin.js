@@ -5,6 +5,8 @@ let accessToken = localStorage.getItem('sa_access_token');
 let superAdminUser = JSON.parse(localStorage.getItem('sa_user'));
 let usersList = [];
 let permissionsList = [];
+let levelsList = [];
+let rolesList = [];
 
 // DOM Elements
 const loginScreen = document.getElementById('login-screen');
@@ -26,8 +28,12 @@ const adminEmailDisplay = document.getElementById('admin-email-display');
 // Permissions DOM Elements
 const menuStaff = document.getElementById('menu-staff');
 const menuPermissions = document.getElementById('menu-permissions');
+const menuLevels = document.getElementById('menu-levels');
+const menuRoles = document.getElementById('menu-roles');
 const staffSection = document.getElementById('staff-section');
 const permissionsSection = document.getElementById('permissions-section');
+const levelsSection = document.getElementById('levels-section');
+const rolesSection = document.getElementById('roles-section');
 const permissionsTableBody = document.getElementById('permissions-table-body');
 const permissionSearchInput = document.getElementById('permission-search-input');
 const permissionRefreshBtn = document.getElementById('permission-refresh-btn');
@@ -38,6 +44,31 @@ const permissionModal = document.getElementById('permission-modal');
 const permissionForm = document.getElementById('permission-form');
 const permissionModalTitle = document.getElementById('permission-modal-title');
 const permissionSubmitText = document.getElementById('permission-submit-text');
+
+// Levels and Roles DOM Elements
+const levelsTableBody = document.getElementById('levels-table-body');
+const rolesTableBody = document.getElementById('roles-table-body');
+const levelSearchInput = document.getElementById('level-search-input');
+const levelRefreshBtn = document.getElementById('level-refresh-btn');
+const roleSearchInput = document.getElementById('role-search-input');
+const roleRefreshBtn = document.getElementById('role-refresh-btn');
+
+// Level Modal DOM Elements
+const levelModal = document.getElementById('level-modal');
+const levelForm = document.getElementById('level-form');
+const levelModalTitle = document.getElementById('level-modal-title');
+const levelSubmitText = document.getElementById('level-submit-text');
+const closeLevelModalBtn = document.getElementById('close-level-modal-btn');
+const cancelLevelBtn = document.getElementById('cancel-level-btn');
+
+// Role Modal DOM Elements
+const roleModal = document.getElementById('role-modal');
+const roleForm = document.getElementById('role-form');
+const roleModalTitle = document.getElementById('role-modal-title');
+const roleSubmitText = document.getElementById('role-submit-text');
+const closeRoleModalBtn = document.getElementById('close-role-modal-btn');
+const cancelRoleBtn = document.getElementById('cancel-role-btn');
+const rolePermissionsList = document.getElementById('role-permissions-list');
 
 // Stat Elements
 const statTotalStaff = document.getElementById('stat-total-staff');
@@ -80,6 +111,8 @@ function checkAuth() {
         adminEmailDisplay.textContent = superAdminUser.email;
         fetchUsers();
         fetchPermissions();
+        fetchLevels();
+        fetchRoles();
     } else {
         localStorage.removeItem('sa_access_token');
         localStorage.removeItem('sa_user');
@@ -344,20 +377,33 @@ logoutBtn.addEventListener('click', logout);
 // Sidebar Switching Logic
 menuStaff.addEventListener('click', (e) => {
     e.preventDefault();
-    menuStaff.classList.add('active');
-    menuPermissions.classList.remove('active');
-    staffSection.style.display = 'block';
-    permissionsSection.style.display = 'none';
+    setActiveMenu(menuStaff, staffSection);
 });
 
 menuPermissions.addEventListener('click', (e) => {
     e.preventDefault();
-    menuPermissions.classList.add('active');
-    menuStaff.classList.remove('active');
-    staffSection.style.display = 'none';
-    permissionsSection.style.display = 'block';
+    setActiveMenu(menuPermissions, permissionsSection);
     fetchPermissions();
 });
+
+menuLevels.addEventListener('click', (e) => {
+    e.preventDefault();
+    setActiveMenu(menuLevels, levelsSection);
+    fetchLevels();
+});
+
+menuRoles.addEventListener('click', (e) => {
+    e.preventDefault();
+    setActiveMenu(menuRoles, rolesSection);
+    fetchRoles();
+});
+
+function setActiveMenu(menuItem, sectionItem) {
+    [menuStaff, menuPermissions, menuLevels, menuRoles].forEach(m => m.classList.remove('active'));
+    [staffSection, permissionsSection, levelsSection, rolesSection].forEach(s => s.style.display = 'none');
+    menuItem.classList.add('active');
+    sectionItem.style.display = 'block';
+}
 
 // Fetch Permissions List
 async function fetchPermissions() {
@@ -586,6 +632,438 @@ permissionRefreshBtn.addEventListener('click', () => {
     fetchPermissions();
     showToast('Permissions list refreshed.', 'success');
 });
+
+// Fetch Levels
+async function fetchLevels() {
+    levelsTableBody.innerHTML = `
+        <tr class="table-loading">
+            <td colspan="7">
+                <div class="loader-spinner"></div>
+                <span>Fetching levels...</span>
+            </td>
+        </tr>
+    `;
+
+    try {
+        const response = await fetch(`${API_URL}/levels`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            levelsList = resData.data;
+            renderLevels(levelsList);
+        } else {
+            showToast(resData.error || 'Failed to retrieve levels.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to fetch levels from server.', 'error');
+        console.error(err);
+    }
+}
+
+// Render Levels to Table
+function renderLevels(levels) {
+    if (!levels || levels.length === 0) {
+        levelsTableBody.innerHTML = `
+            <tr class="table-empty">
+                <td colspan="7">
+                    <i class="fa-regular fa-folder-open"></i>
+                    <span>No levels found.</span>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    levelsTableBody.innerHTML = levels.map(level => {
+        const ownerText = level.admin_id 
+            ? `<div class="badge-owner" title="${escapeHTML(level.owner_email)}">${escapeHTML(level.owner_name)}</div>`
+            : `<div class="badge-system">System</div>`;
+        return `
+            <tr>
+                <td class="staff-name-col">
+                    <span style="display:inline-block; width:12px; height:12px; border-radius:50%; background-color:${escapeHTML(level.color || '#fff')}; margin-right:8px; vertical-align:middle;"></span>
+                    ${escapeHTML(level.name)}
+                </td>
+                <td>${escapeHTML(level.description || 'N/A')}</td>
+                <td><span class="badge-level">${escapeHTML(level.sla_window || 'N/A')}</span></td>
+                <td>${escapeHTML(level.cycle_count || 'N/A')}</td>
+                <td>${escapeHTML(level.response_logic || 'N/A')}</td>
+                <td>${ownerText}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon btn-edit" onclick="openEditLevelModal(${level.id})" title="Edit">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" onclick="deleteLevel(${level.id})" title="Delete">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Level Modal Actions
+function openEditLevelModal(id) {
+    const level = levelsList.find(l => l.id === id);
+    if (!level) return;
+    levelModalTitle.textContent = 'Edit Level';
+    levelSubmitText.textContent = 'Save Changes';
+    document.getElementById('level-id').value = level.id;
+    document.getElementById('level-name').value = level.name;
+    document.getElementById('level-desc').value = level.description || '';
+    document.getElementById('level-sla').value = level.sla_window || '';
+    document.getElementById('level-cycles').value = level.cycle_count || '';
+    document.getElementById('level-response').value = level.response_logic || '';
+    document.getElementById('level-color').value = level.color || '#ffffff';
+    levelModal.classList.add('open');
+}
+
+function closeLevelModal() {
+    levelModal.classList.remove('open');
+    levelForm.reset();
+}
+
+closeLevelModalBtn.addEventListener('click', closeLevelModal);
+cancelLevelBtn.addEventListener('click', closeLevelModal);
+levelModal.addEventListener('click', (e) => {
+    if (e.target === levelModal) {
+        closeLevelModal();
+    }
+});
+
+// Level Submit
+levelForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('level-id').value;
+    const name = document.getElementById('level-name').value.trim();
+    const description = document.getElementById('level-desc').value.trim();
+    const sla_window = document.getElementById('level-sla').value.trim();
+    const cycle_count = document.getElementById('level-cycles').value.trim();
+    const response_logic = document.getElementById('level-response').value.trim();
+    const color = document.getElementById('level-color').value;
+    const submitBtn = document.getElementById('level-submit-btn');
+
+    const originalBtnHTML = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<div class="loader-spinner"></div> <span>Saving...</span>`;
+
+    try {
+        const response = await fetch(`${API_URL}/levels/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ name, description, sla_window, cycle_count, response_logic, color })
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast('Level updated successfully!', 'success');
+            closeLevelModal();
+            fetchLevels();
+        } else {
+            showToast(resData.error || 'Failed to update level.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error. Failed to save level.', 'error');
+        console.error(err);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnHTML;
+    }
+});
+
+// Delete Level
+async function deleteLevel(id) {
+    if (!confirm('Are you sure you want to delete this level?')) return;
+
+    try {
+        const response = await fetch(`${API_URL}/levels/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast('Level deleted successfully!', 'success');
+            fetchLevels();
+        } else {
+            showToast(resData.error || 'Failed to delete level.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+    }
+}
+
+// Fetch Roles
+async function fetchRoles() {
+    rolesTableBody.innerHTML = `
+        <tr class="table-loading">
+            <td colspan="5">
+                <div class="loader-spinner"></div>
+                <span>Fetching roles...</span>
+            </td>
+        </tr>
+    `;
+
+    try {
+        const response = await fetch(`${API_URL}/roles`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            rolesList = resData.data;
+            renderRoles(rolesList);
+        } else {
+            showToast(resData.error || 'Failed to retrieve roles.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to fetch roles from server.', 'error');
+        console.error(err);
+    }
+}
+
+// Render Roles to Table
+function renderRoles(roles) {
+    if (!roles || roles.length === 0) {
+        rolesTableBody.innerHTML = `
+            <tr class="table-empty">
+                <td colspan="5">
+                    <i class="fa-regular fa-folder-open"></i>
+                    <span>No roles found.</span>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    rolesTableBody.innerHTML = roles.map(role => {
+        const ownerText = role.admin_id 
+            ? `<div class="badge-owner" title="${escapeHTML(role.owner_email)}">${escapeHTML(role.owner_name)}</div>`
+            : `<div class="badge-system">System</div>`;
+        const permissionsBadges = (role.permissions || []).map(p => 
+            `<span class="badge badge-guard" style="margin-right: 4px; margin-bottom: 4px; font-size: 11px;">${escapeHTML(p.name)}</span>`
+        ).join('');
+        
+        return `
+            <tr>
+                <td class="staff-name-col">${escapeHTML(role.name)}</td>
+                <td>${escapeHTML(role.description || 'N/A')}</td>
+                <td><div style="display:flex; flex-wrap:wrap; max-width:320px;">${permissionsBadges || 'None'}</div></td>
+                <td>${ownerText}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon btn-edit" onclick="openEditRoleModal(${role.id})" title="Edit">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" onclick="deleteRole(${role.id})" title="Delete">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Role Modal Actions
+async function openEditRoleModal(id) {
+    const role = rolesList.find(r => r.id === id);
+    if (!role) return;
+    roleModalTitle.textContent = 'Edit Role';
+    roleSubmitText.textContent = 'Save Changes';
+    document.getElementById('role-id').value = role.id;
+    document.getElementById('role-name').value = role.name;
+    document.getElementById('role-desc').value = role.description || '';
+
+    // Populate permissions list checkboxes
+    rolePermissionsList.innerHTML = `
+        <div style="grid-column: span 2; text-align: center; padding: 10px;">
+            <div class="loader-spinner" style="margin:0 auto 6px;"></div>
+            <span>Loading permissions...</span>
+        </div>
+    `;
+    
+    try {
+        if (permissionsList.length === 0) {
+            const response = await fetch(`${API_URL}/permissions`, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const resData = await response.json();
+            if (response.ok && resData.status) {
+                permissionsList = resData.data;
+            }
+        }
+        
+        const activeSystemPermissions = permissionsList.filter(p => p.is_active);
+        const assignedIds = (role.permissions || []).map(p => p.id);
+
+        if (activeSystemPermissions.length === 0) {
+            rolePermissionsList.innerHTML = '<span style="grid-column: span 2; text-align:center; color:var(--text-muted);">No active permissions available.</span>';
+        } else {
+            rolePermissionsList.innerHTML = activeSystemPermissions.map(p => {
+                const checked = assignedIds.includes(p.id) ? 'checked' : '';
+                return `
+                    <label class="permission-checkbox-item">
+                        <input type="checkbox" value="${p.id}" ${checked}>
+                        <span>${escapeHTML(p.name)}</span>
+                    </label>
+                `;
+            }).join('');
+        }
+    } catch (err) {
+        rolePermissionsList.innerHTML = '<span style="grid-column: span 2; text-align:center; color:var(--error);">Failed to load permissions.</span>';
+        console.error(err);
+    }
+
+    roleModal.classList.add('open');
+}
+
+function closeRoleModal() {
+    roleModal.classList.remove('open');
+    roleForm.reset();
+}
+
+closeRoleModalBtn.addEventListener('click', closeRoleModal);
+cancelRoleBtn.addEventListener('click', closeRoleModal);
+roleModal.addEventListener('click', (e) => {
+    if (e.target === roleModal) {
+        closeRoleModal();
+    }
+});
+
+// Role Submit
+roleForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('role-id').value;
+    const name = document.getElementById('role-name').value.trim();
+    const description = document.getElementById('role-desc').value.trim();
+    
+    const checkedCheckboxes = rolePermissionsList.querySelectorAll('input[type="checkbox"]:checked');
+    const permissions = Array.from(checkedCheckboxes).map(cb => parseInt(cb.value, 10));
+    
+    const submitBtn = document.getElementById('role-submit-btn');
+    const originalBtnHTML = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<div class="loader-spinner"></div> <span>Saving...</span>`;
+
+    try {
+        const response = await fetch(`${API_URL}/roles/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ name, description, permissions })
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast('Role updated successfully!', 'success');
+            closeRoleModal();
+            fetchRoles();
+        } else {
+            showToast(resData.error || 'Failed to update role.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error. Failed to save role.', 'error');
+        console.error(err);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnHTML;
+    }
+});
+
+// Delete Role
+async function deleteRole(id) {
+    if (!confirm('Are you sure you want to delete this role?')) return;
+
+    try {
+        const response = await fetch(`${API_URL}/roles/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast('Role deleted successfully!', 'success');
+            fetchRoles();
+        } else {
+            showToast(resData.error || 'Failed to delete role.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+    }
+}
+
+// Level Search & Refresh Event Listeners
+levelSearchInput.addEventListener('keyup', () => {
+    const query = levelSearchInput.value.toLowerCase().trim();
+    if (!query) {
+        renderLevels(levelsList);
+        return;
+    }
+    const filtered = levelsList.filter(l => {
+        const name = (l.name || '').toLowerCase();
+        const desc = (l.description || '').toLowerCase();
+        return name.includes(query) || desc.includes(query);
+    });
+    renderLevels(filtered);
+});
+
+levelRefreshBtn.addEventListener('click', () => {
+    fetchLevels();
+    showToast('Levels refreshed.', 'success');
+});
+
+// Role Search & Refresh Event Listeners
+roleSearchInput.addEventListener('keyup', () => {
+    const query = roleSearchInput.value.toLowerCase().trim();
+    if (!query) {
+        renderRoles(rolesList);
+        return;
+    }
+    const filtered = rolesList.filter(r => {
+        const name = (r.name || '').toLowerCase();
+        const desc = (r.description || '').toLowerCase();
+        return name.includes(query) || desc.includes(query);
+    });
+    renderRoles(filtered);
+});
+
+roleRefreshBtn.addEventListener('click', () => {
+    fetchRoles();
+    showToast('Roles refreshed.', 'success');
+});
+
+// Expose level and role functions globally
+window.openEditLevelModal = openEditLevelModal;
+window.deleteLevel = deleteLevel;
+window.openEditRoleModal = openEditRoleModal;
+window.deleteRole = deleteRole;
 
 // Expose permission functions globally so they can be called from dynamically rendered HTML
 window.togglePermissionStatus = togglePermissionStatus;

@@ -36,18 +36,22 @@ class RoleRepository {
         }
     }
 
-    async getAll(adminId) {
+    async getAll(adminId = null, isSuperAdmin = false) {
         await poolConnect;
-        // Join with permissions to get list of permissions per role
-        const rolesResult = await pool.request()
-            .input('admin_id', sql.Int, adminId)
-            .query(`
-                SELECT r.id, r.name, r.description, r.admin_id, r.created_at
-                FROM roles r
-                WHERE r.admin_id = @admin_id OR r.admin_id IS NULL
-                ORDER BY r.id DESC
-            `);
+        let query = `
+            SELECT r.id, r.name, r.description, r.admin_id, r.created_at,
+                   u.name AS owner_name, u.email AS owner_email
+            FROM roles r
+            LEFT JOIN users u ON r.admin_id = u.id
+        `;
+        const request = pool.request();
+        if (!isSuperAdmin && adminId !== null) {
+            query += ' WHERE r.admin_id = @adminId OR r.admin_id IS NULL';
+            request.input('adminId', sql.Int, adminId);
+        }
+        query += ' ORDER BY r.id DESC';
 
+        const rolesResult = await request.query(query);
         const roles = rolesResult.recordset;
         for (const role of roles) {
             role.permissions = await this.getPermissionsByRoleId(role.id);
@@ -68,17 +72,22 @@ class RoleRepository {
         return result.recordset;
     }
 
-    async getById(id, adminId) {
+    async getById(id, adminId = null, isSuperAdmin = false) {
         await poolConnect;
-        const result = await pool.request()
-            .input('id', sql.Int, id)
-            .input('admin_id', sql.Int, adminId)
-            .query(`
-                SELECT TOP 1 id, name, description, admin_id, created_at 
-                FROM roles 
-                WHERE id = @id AND (admin_id = @admin_id OR admin_id IS NULL)
-            `);
+        let query = `
+            SELECT r.id, r.name, r.description, r.admin_id, r.created_at,
+                   u.name AS owner_name, u.email AS owner_email
+            FROM roles r
+            LEFT JOIN users u ON r.admin_id = u.id
+            WHERE r.id = @id
+        `;
+        const request = pool.request().input('id', sql.Int, id);
+        if (!isSuperAdmin && adminId !== null) {
+            query += ' AND (r.admin_id = @adminId OR r.admin_id IS NULL)';
+            request.input('adminId', sql.Int, adminId);
+        }
         
+        const result = await request.query(query);
         const role = result.recordset[0];
         if (role) {
             role.permissions = await this.getPermissionsByRoleId(role.id);
@@ -86,19 +95,23 @@ class RoleRepository {
         return role;
     }
 
-    async search(adminId, query) {
+    async search(adminId = null, query, isSuperAdmin = false) {
         await poolConnect;
-        const rolesResult = await pool.request()
-            .input('admin_id', sql.Int, adminId)
-            .input('searchQuery', sql.NVarChar, `%${query.trim()}%`)
-            .query(`
-                SELECT r.id, r.name, r.description, r.admin_id, r.created_at
-                FROM roles r
-                WHERE (r.admin_id = @admin_id OR r.admin_id IS NULL)
-                  AND (r.name LIKE @searchQuery OR r.description LIKE @searchQuery)
-                ORDER BY r.id DESC
-            `);
+        let queryStr = `
+            SELECT r.id, r.name, r.description, r.admin_id, r.created_at,
+                   u.name AS owner_name, u.email AS owner_email
+            FROM roles r
+            LEFT JOIN users u ON r.admin_id = u.id
+            WHERE (r.name LIKE @searchQuery OR r.description LIKE @searchQuery)
+        `;
+        const request = pool.request().input('searchQuery', sql.NVarChar, `%${query.trim()}%`);
+        if (!isSuperAdmin && adminId !== null) {
+            queryStr += ' AND (r.admin_id = @adminId OR r.admin_id IS NULL)';
+            request.input('adminId', sql.Int, adminId);
+        }
+        queryStr += ' ORDER BY r.id DESC';
 
+        const rolesResult = await request.query(queryStr);
         const roles = rolesResult.recordset;
         for (const role of roles) {
             role.permissions = await this.getPermissionsByRoleId(role.id);
@@ -106,28 +119,37 @@ class RoleRepository {
         return roles;
     }
 
-    async update(id, adminId, { name, description }) {
+    async update(id, adminId, { name, description }, isSuperAdmin = false) {
         await poolConnect;
-        const result = await pool.request()
+        const request = pool.request()
             .input('id', sql.Int, id)
-            .input('admin_id', sql.Int, adminId)
             .input('name', sql.NVarChar, name.trim())
-            .input('description', sql.NVarChar, description ? description.trim() : null)
-            .query(`
-                UPDATE roles
-                SET name = @name, description = @description
-                OUTPUT INSERTED.id, INSERTED.name, INSERTED.description, INSERTED.admin_id, INSERTED.created_at
-                WHERE id = @id AND admin_id = @admin_id
-            `);
+            .input('description', sql.NVarChar, description ? description.trim() : null);
+
+        let query = `
+            UPDATE roles
+            SET name = @name, description = @description
+            OUTPUT INSERTED.id, INSERTED.name, INSERTED.description, INSERTED.admin_id, INSERTED.created_at
+            WHERE id = @id
+        `;
+        if (!isSuperAdmin && adminId !== null) {
+            query += ' AND admin_id = @admin_id';
+            request.input('admin_id', sql.Int, adminId);
+        }
+
+        const result = await request.query(query);
         return result.recordset[0];
     }
 
-    async delete(id, adminId) {
+    async delete(id, adminId, isSuperAdmin = false) {
         await poolConnect;
-        await pool.request()
-            .input('id', sql.Int, id)
-            .input('admin_id', sql.Int, adminId)
-            .query('DELETE FROM roles WHERE id = @id AND admin_id = @admin_id');
+        const request = pool.request().input('id', sql.Int, id);
+        let query = 'DELETE FROM roles WHERE id = @id';
+        if (!isSuperAdmin && adminId !== null) {
+            query += ' AND admin_id = @admin_id';
+            request.input('admin_id', sql.Int, adminId);
+        }
+        await request.query(query);
     }
 
     async findByName(adminId, name) {

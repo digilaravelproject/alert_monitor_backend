@@ -16,7 +16,7 @@ const validateAddOrUpdateUser = (req, res, next) => {
     if (role === undefined || role === null || (typeof role !== 'string' && typeof role !== 'number') || (typeof role === 'string' && role.trim() === '')) {
         errors.push('Role is required');
     }
-    if (!access_level || typeof access_level !== 'string' || access_level.trim() === '') {
+    if (access_level === undefined || access_level === null || (typeof access_level !== 'string' && typeof access_level !== 'number') || (typeof access_level === 'string' && access_level.trim() === '')) {
         errors.push('Access level is required');
     }
     if (!location || typeof location !== 'string' || location.trim() === '') {
