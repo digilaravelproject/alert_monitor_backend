@@ -157,6 +157,34 @@ async function updateSchema() {
             IF NOT EXISTS (SELECT * FROM levels WHERE name = 'Level 4 (Information)' AND admin_id IS NULL) 
                 INSERT INTO levels (name, description, sla_window, cycle_count, response_logic, color, admin_id) 
                 VALUES ('Level 4 (Information)', 'Information Priority Protocol', '1h', '3x', 'Immediate', 'grey', NULL);
+
+            -- Create locations table
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[locations]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[locations] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    name NVARCHAR(100) NOT NULL,
+                    address NVARCHAR(255) NULL,
+                    city NVARCHAR(100) NULL,
+                    zip_code NVARCHAR(20) NULL,
+                    is_active BIT NOT NULL DEFAULT 1,
+                    admin_id INT NULL,
+                    created_at DATETIME DEFAULT GETDATE()
+                );
+                PRINT 'Table locations created.';
+            END
+
+            -- Check and add location_id column to users table
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[users]') AND name = 'location_id')
+            BEGIN
+                ALTER TABLE [dbo].[users] ADD location_id INT NULL;
+                ALTER TABLE [dbo].[users] ADD CONSTRAINT FK_users_location_id FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL;
+                PRINT 'Added location_id column to users.';
+            END
+            ELSE
+            BEGIN
+                PRINT 'location_id column already exists.';
+            END
         `);
 
         console.log('Database migration completed successfully.');

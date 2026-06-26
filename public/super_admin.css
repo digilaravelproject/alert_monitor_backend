@@ -1013,6 +1013,38 @@ input:checked + .slider:before {
     padding: 3px 8px;
     border-radius: 6px;
     display: inline-block;
+    position: relative;
+    cursor: pointer;
+}
+
+.badge-owner::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%) translateY(5px);
+    background: #090d16;
+    color: #f3f4f6;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: pre-line;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, transform 0.2s;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 9999;
+    pointer-events: none;
+    text-align: left;
+    width: max-content;
+    line-height: 1.5;
+}
+
+.badge-owner:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
 }
 
 .badge-system {

@@ -13,6 +13,33 @@ class ServiceError extends Error {
     }
 }
 
+function mapUserRow(row) {
+    if (!row) return null;
+    return {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        phone_number: row.phone_number,
+        role: row.role,
+        role_id: row.role_id,
+        access_level: row.access_level,
+        level_id: row.level_id,
+        location: row.location_id ? {
+            id: row.location_id,
+            name: row.loc_name,
+            address: row.loc_address,
+            city: row.loc_city,
+            zip_code: row.loc_zip_code,
+            is_active: row.loc_is_active
+        } : (row.location ? { name: row.location } : null),
+        created_at: row.created_at,
+        admin_id: row.admin_id,
+        is_blocked: row.is_blocked,
+        ...(row.permissions && { permissions: row.permissions }),
+        ...(row.level && { level: row.level })
+    };
+}
+
 class UserService {
     // 1. Temp User APIs
     async createTempUser(email, phone_number) {
@@ -24,7 +51,7 @@ class UserService {
     }
 
     // 2. Add User (Staff Enrollment)
-    async addStaff(name, phone_number, role, access_level, location, currentUser) {
+    async addStaff(name, phone_number, role, access_level, location_id, currentUser) {
         const normalizedPhone = normalizePhoneNumber(phone_number);
 
         // Check if user already exists
@@ -63,13 +90,16 @@ class UserService {
             phone_number: normalizedPhone,
             role_id: roleId,
             level_id: levelId,
-            location: location.trim(),
+            location_id: parseInt(location_id, 10),
             created_at: new Date(),
             admin_id: adminId,
             is_blocked: isBlocked
         });
 
-        return newUser;
+        // Fetch user with location details
+        const staffOwnerAdminId = currentUser.role === 'Super Admin' ? null : currentUser.id;
+        const freshUser = await userRepository.checkStaffOwnership(newUser.id, staffOwnerAdminId, currentUser.role);
+        return mapUserRow(freshUser[0]);
     }
 
     // 3. User Login (Generate OTP)
@@ -137,7 +167,14 @@ class UserService {
             phone_number: user.phone_number,
             role: user.role,
             access_level: user.access_level,
-            location: user.location,
+            location: user.location_id ? {
+                id: user.location_id,
+                name: user.loc_name,
+                address: user.loc_address,
+                city: user.loc_city,
+                zip_code: user.loc_zip_code,
+                is_active: user.loc_is_active
+            } : (user.location ? { name: user.location } : null),
             ...(user.role !== 'Admin' && { permissions, level })
         };
 
@@ -188,7 +225,8 @@ class UserService {
 
     // 6. List Users
     async getAllUsers() {
-        return await userRepository.findAllUsers();
+        const users = await userRepository.findAllUsers();
+        return users.map(mapUserRow);
     }
 
     // 7. Staff Listing & Stats
@@ -205,7 +243,7 @@ class UserService {
 
         return {
             counts,
-            data
+            data: data.map(mapUserRow)
         };
     }
 
@@ -218,7 +256,8 @@ class UserService {
             throw new ServiceError('Forbidden: Access denied', 403);
         }
 
-        return await userRepository.searchStaff(adminId, role, query);
+        const results = await userRepository.searchStaff(adminId, role, query);
+        return results.map(mapUserRow);
     }
 
     // 9. Staff Member by ID
@@ -235,11 +274,11 @@ class UserService {
             throw new ServiceError('Staff member not found or access denied', 404);
         }
 
-        return result[0];
+        return mapUserRow(result[0]);
     }
 
     // 10. Update Staff Details
-    async updateStaff(staffId, currentUser, name, phone_number, role, access_level, location) {
+    async updateStaff(staffId, currentUser, name, phone_number, role, access_level, location_id) {
         const adminId = currentUser.id;
         const currentUserRole = currentUser.role;
 
@@ -285,8 +324,12 @@ class UserService {
         }
 
         // Update record
-        const updatedStaff = await userRepository.updateStaff(staffId, name, normalizedPhone, roleId, levelId, location);
-        return updatedStaff;
+        const parsedLocationId = parseInt(location_id, 10);
+        await userRepository.updateStaff(staffId, name, normalizedPhone, roleId, levelId, parsedLocationId);
+
+        // Fetch updated user with location details
+        const freshUser = await userRepository.checkStaffOwnership(staffId, adminId, currentUserRole);
+        return mapUserRow(freshUser[0]);
     }
 
     // 11. Toggle Block/Unblock Staff

@@ -64,16 +64,17 @@ class UserRepository {
             .input('role_id', sql.Int, user.role_id)
             .input('access_level', sql.NVarChar, null) // "Should send level id insteade of level name in add staff and update staff api's."
             .input('level_id', sql.Int, user.level_id)
-            .input('location', sql.NVarChar, user.location)
+            .input('location', sql.NVarChar, null)
+            .input('location_id', sql.Int, user.location_id)
             .input('created_at', sql.DateTime, user.created_at || new Date())
             .input('admin_id', sql.Int, user.admin_id)
             .input('is_blocked', sql.Bit, user.is_blocked || 0)
             .query(`
                 INSERT INTO users 
-                (name, phone_number, role, role_id, access_level, level_id, location, created_at, admin_id, is_blocked)
-                OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone_number, INSERTED.role, INSERTED.role_id, INSERTED.access_level, INSERTED.level_id, INSERTED.location, INSERTED.created_at, INSERTED.admin_id, INSERTED.is_blocked
+                (name, phone_number, role, role_id, access_level, level_id, location, location_id, created_at, admin_id, is_blocked)
+                OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone_number, INSERTED.role, INSERTED.role_id, INSERTED.access_level, INSERTED.level_id, INSERTED.location, INSERTED.location_id, INSERTED.created_at, INSERTED.admin_id, INSERTED.is_blocked
                 VALUES 
-                (@name, @phone_number, @role, @role_id, @access_level, @level_id, @location, @created_at, @admin_id, @is_blocked)
+                (@name, @phone_number, @role, @role_id, @access_level, @level_id, @location, @location_id, @created_at, @admin_id, @is_blocked)
             `);
         return result.recordset[0];
     }
@@ -101,10 +102,13 @@ class UserRepository {
             .input('raw_phone', sql.NVarChar, rawPhone)
             .input('ten_digits', sql.NVarChar, tenDigits)
             .query(`
-                SELECT TOP 1 u.id, u.name, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.otp, u.otp_expiry 
+                SELECT TOP 1 u.id, u.name, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.location_id,
+                       loc.name as loc_name, loc.address as loc_address, loc.city as loc_city, loc.zip_code as loc_zip_code, loc.is_active as loc_is_active,
+                       u.otp, u.otp_expiry 
                 FROM users u
                 LEFT JOIN roles r ON u.role_id = r.id
                 LEFT JOIN levels l ON u.level_id = l.id
+                LEFT JOIN locations loc ON u.location_id = loc.id
                 WHERE u.phone_number = @phone_number
                    OR u.phone_number = @raw_phone
                    OR u.phone_number = @ten_digits
@@ -148,10 +152,13 @@ class UserRepository {
         await poolConnect;
         const result = await pool.request()
             .query(`
-                SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.created_at
+                SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.location_id,
+                       loc.name as loc_name, loc.address as loc_address, loc.city as loc_city, loc.zip_code as loc_zip_code, loc.is_active as loc_is_active,
+                       u.created_at
                 FROM users u
                 LEFT JOIN roles r ON u.role_id = r.id
                 LEFT JOIN levels l ON u.level_id = l.id
+                LEFT JOIN locations loc ON u.location_id = loc.id
                 ORDER BY u.id DESC
             `);
         return result.recordset;
@@ -181,10 +188,13 @@ class UserRepository {
     async findStaff(adminId, role, levelQuery) {
         await poolConnect;
         let queryStr = `
-            SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.created_at, u.admin_id, u.is_blocked 
+            SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.location_id,
+                   loc.name as loc_name, loc.address as loc_address, loc.city as loc_city, loc.zip_code as loc_zip_code, loc.is_active as loc_is_active,
+                   u.created_at, u.admin_id, u.is_blocked 
             FROM users u
             LEFT JOIN roles r ON u.role_id = r.id
             LEFT JOIN levels l ON u.level_id = l.id
+            LEFT JOIN locations loc ON u.location_id = loc.id
             WHERE 1=1
         `;
         const request = pool.request();
@@ -213,14 +223,18 @@ class UserRepository {
     async searchStaff(adminId, role, query) {
         await poolConnect;
         let queryStr = `
-            SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.created_at, u.admin_id, u.is_blocked 
+            SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.location_id,
+                   loc.name as loc_name, loc.address as loc_address, loc.city as loc_city, loc.zip_code as loc_zip_code, loc.is_active as loc_is_active,
+                   u.created_at, u.admin_id, u.is_blocked 
             FROM users u
             LEFT JOIN roles r ON u.role_id = r.id
             LEFT JOIN levels l ON u.level_id = l.id
+            LEFT JOIN locations loc ON u.location_id = loc.id
             WHERE (u.name LIKE @searchQuery 
                OR u.phone_number LIKE @searchQuery 
                OR COALESCE(r.name, u.role) LIKE @searchQuery 
                OR COALESCE(l.name, u.access_level) LIKE @searchQuery 
+               OR loc.name LIKE @searchQuery
                OR u.location LIKE @searchQuery)
         `;
         const request = pool.request();
@@ -241,10 +255,13 @@ class UserRepository {
         await poolConnect;
         const request = pool.request().input('id', sql.Int, staffId);
         let queryStr = `
-            SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.created_at, u.admin_id, u.is_blocked
+            SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.location_id,
+                   loc.name as loc_name, loc.address as loc_address, loc.city as loc_city, loc.zip_code as loc_zip_code, loc.is_active as loc_is_active,
+                   u.created_at, u.admin_id, u.is_blocked
             FROM users u
             LEFT JOIN roles r ON u.role_id = r.id
             LEFT JOIN levels l ON u.level_id = l.id
+            LEFT JOIN locations loc ON u.location_id = loc.id
             WHERE u.id = @id
         `;
         if (role === 'Admin') {
@@ -255,7 +272,7 @@ class UserRepository {
         return result.recordset;
     }
 
-    async updateStaff(staffId, name, phone, roleId, levelId, location) {
+    async updateStaff(staffId, name, phone, roleId, levelId, locationId) {
         await poolConnect;
         const result = await pool.request()
             .input('id', sql.Int, staffId)
@@ -265,7 +282,8 @@ class UserRepository {
             .input('role_id', sql.Int, roleId)
             .input('access_level', sql.NVarChar, null) // Set to null, do not store level name!
             .input('level_id', sql.Int, levelId)
-            .input('location', sql.NVarChar, location.trim())
+            .input('location', sql.NVarChar, null)
+            .input('location_id', sql.Int, locationId)
             .query(`
                 UPDATE users 
                 SET name = @name, 
@@ -274,8 +292,9 @@ class UserRepository {
                     role_id = @role_id,
                     access_level = @access_level, 
                     level_id = @level_id,
-                    location = @location
-                OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone_number, INSERTED.role, INSERTED.role_id, INSERTED.access_level, INSERTED.level_id, INSERTED.location, INSERTED.created_at, INSERTED.admin_id, INSERTED.is_blocked
+                    location = @location,
+                    location_id = @location_id
+                OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone_number, INSERTED.role, INSERTED.role_id, INSERTED.access_level, INSERTED.level_id, INSERTED.location, INSERTED.location_id, INSERTED.created_at, INSERTED.admin_id, INSERTED.is_blocked
                 WHERE id = @id
             `);
         return result.recordset[0];

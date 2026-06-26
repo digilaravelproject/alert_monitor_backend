@@ -85,6 +85,10 @@
                     <i class="fa-solid fa-user-shield"></i>
                     <span>Manage Roles</span>
                 </a>
+                <a href="#" class="menu-item" id="menu-locations">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <span>Manage Locations</span>
+                </a>
             </div>
 
             <div class="sidebar-footer">
@@ -325,6 +329,89 @@
                     </div>
                 </section>
             </div>
+
+            <!-- LOCATIONS SECTION -->
+            <div id="locations-section" style="display: none;">
+                <header class="content-header">
+                    <div class="header-title">
+                        <h1>Manage Locations</h1>
+                        <p class="subtitle">View and configure organization locations and sites</p>
+                    </div>
+                    <button id="open-location-modal-btn" class="btn btn-primary">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Add Location</span>
+                    </button>
+                </header>
+
+                <!-- Stats Section -->
+                <section class="stats-grid">
+                    <div class="stats-card card-blue">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-location-dot"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Total Locations</span>
+                            <h3 id="stat-total-locations">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="stats-card card-purple">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Total Nodes (Staff)</span>
+                            <h3 id="stat-locations-nodes">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="stats-card card-teal">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-signal"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Active Locations</span>
+                            <h3 id="stat-locations-active">0</h3>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="table-section">
+                    <div class="table-actions">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="location-search-input" placeholder="Search by name, address, city or zip code...">
+                        </div>
+                        <button id="location-refresh-btn" class="btn btn-secondary">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Location Name</th>
+                                    <th>Full Address</th>
+                                    <th>City</th>
+                                    <th>Zip Code</th>
+                                    <th style="width: 120px; text-align: center;">Nodes</th>
+                                    <th style="width: 150px; text-align: center;">Status</th>
+                                    <th style="width: 150px; text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="locations-table-body">
+                                <tr class="table-loading">
+                                    <td colspan="7">
+                                        <div class="loader-spinner"></div>
+                                        <span>Fetching locations...</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
@@ -355,8 +442,6 @@
                         <label for="staff-role"><i class="fa-solid fa-shield-halved"></i> Role</label>
                         <select id="staff-role" required>
                             <option value="" disabled selected>Select Role</option>
-                            <option value="Security Guard">Security Guard</option>
-                            <option value="Admin">Admin</option>
                         </select>
                     </div>
                 </div>
@@ -364,11 +449,15 @@
                 <div class="form-row">
                     <div class="form-group col-6">
                         <label for="staff-access"><i class="fa-solid fa-key"></i> Access Level</label>
-                        <input type="text" id="staff-access" placeholder="e.g. Level 1" required>
+                        <select id="staff-access" required>
+                            <option value="" disabled selected>Select Access Level</option>
+                        </select>
                     </div>
                     <div class="form-group col-6">
                         <label for="staff-location"><i class="fa-solid fa-location-dot"></i> Location</label>
-                        <input type="text" id="staff-location" placeholder="e.g. Gate 1" required>
+                        <select id="staff-location" required>
+                            <option value="" disabled selected>Select Location</option>
+                        </select>
                     </div>
                 </div>
 
@@ -530,6 +619,65 @@
                     <button type="button" id="cancel-role-btn" class="btn btn-secondary">Cancel</button>
                     <button type="submit" id="role-submit-btn" class="btn btn-primary">
                         <span id="role-submit-text">Save Changes</span>
+                        <i class="fa-solid fa-floppy-disk"></i>
+                    </button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+    <!-- LOCATION MODAL -->
+    <div id="location-modal" class="modal-wrapper">
+        <div class="modal-card">
+            <header class="modal-header">
+                <h2 id="location-modal-title">Add New Location</h2>
+                <button id="close-location-modal-btn" class="modal-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <form id="location-form" class="modal-form">
+                <input type="hidden" id="location-id">
+                
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="location-name"><i class="fa-solid fa-building"></i> Location Name</label>
+                        <input type="text" id="location-name" placeholder="e.g. Corporate North" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="location-address"><i class="fa-solid fa-location-dot"></i> Full Address</label>
+                        <input type="text" id="location-address" placeholder="Street, Building, Floor..." required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="location-city"><i class="fa-solid fa-city"></i> City</label>
+                        <input type="text" id="location-city" placeholder="e.g. Noida" required>
+                    </div>
+                    <div class="form-group col-6">
+                        <label for="location-zip"><i class="fa-solid fa-map-pin"></i> Zip Code</label>
+                        <input type="text" id="location-zip" placeholder="e.g. 201301" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12" style="flex-direction: row; align-items: center; gap: 12px; margin-top: 8px;">
+                        <label class="switch">
+                            <input type="checkbox" id="location-active" checked>
+                            <span class="slider round"></span>
+                        </label>
+                        <span style="font-size: 14px; font-weight: 500; color: var(--text-main);">Active Status</span>
+                    </div>
+                </div>
+
+                <footer class="modal-footer">
+                    <button type="button" id="cancel-location-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" id="location-submit-btn" class="btn btn-primary">
+                        <span id="location-submit-text">Save Location</span>
                         <i class="fa-solid fa-floppy-disk"></i>
                     </button>
                 </footer>

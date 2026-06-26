@@ -7,6 +7,7 @@ let usersList = [];
 let permissionsList = [];
 let levelsList = [];
 let rolesList = [];
+let locationsList = [];
 
 // DOM Elements
 const loginScreen = document.getElementById('login-screen');
@@ -30,10 +31,12 @@ const menuStaff = document.getElementById('menu-staff');
 const menuPermissions = document.getElementById('menu-permissions');
 const menuLevels = document.getElementById('menu-levels');
 const menuRoles = document.getElementById('menu-roles');
+const menuLocations = document.getElementById('menu-locations');
 const staffSection = document.getElementById('staff-section');
 const permissionsSection = document.getElementById('permissions-section');
 const levelsSection = document.getElementById('levels-section');
 const rolesSection = document.getElementById('roles-section');
+const locationsSection = document.getElementById('locations-section');
 const permissionsTableBody = document.getElementById('permissions-table-body');
 const permissionSearchInput = document.getElementById('permission-search-input');
 const permissionRefreshBtn = document.getElementById('permission-refresh-btn');
@@ -70,10 +73,25 @@ const closeRoleModalBtn = document.getElementById('close-role-modal-btn');
 const cancelRoleBtn = document.getElementById('cancel-role-btn');
 const rolePermissionsList = document.getElementById('role-permissions-list');
 
+// Location DOM Elements
+const locationsTableBody = document.getElementById('locations-table-body');
+const locationSearchInput = document.getElementById('location-search-input');
+const locationRefreshBtn = document.getElementById('location-refresh-btn');
+const openLocationModalBtn = document.getElementById('open-location-modal-btn');
+const closeLocationModalBtn = document.getElementById('close-location-modal-btn');
+const cancelLocationBtn = document.getElementById('cancel-location-btn');
+const locationModal = document.getElementById('location-modal');
+const locationForm = document.getElementById('location-form');
+const locationModalTitle = document.getElementById('location-modal-title');
+const locationSubmitText = document.getElementById('location-submit-text');
+
 // Stat Elements
 const statTotalStaff = document.getElementById('stat-total-staff');
 const statAdmins = document.getElementById('stat-admins');
 const statGuards = document.getElementById('stat-guards');
+const statTotalLocations = document.getElementById('stat-total-locations');
+const statLocationsNodes = document.getElementById('stat-locations-nodes');
+const statLocationsActive = document.getElementById('stat-locations-active');
 
 // Toast System
 function showToast(message, type = 'success') {
@@ -113,6 +131,7 @@ function checkAuth() {
         fetchPermissions();
         fetchLevels();
         fetchRoles();
+        fetchLocations();
     } else {
         localStorage.removeItem('sa_access_token');
         localStorage.removeItem('sa_user');
@@ -237,6 +256,9 @@ function renderUsers(users) {
                 minute: '2-digit'
               })
             : 'N/A';
+        const locationText = user.location
+            ? (typeof user.location === 'object' ? user.location.name : user.location)
+            : 'N/A';
             
         return `
             <tr>
@@ -244,7 +266,7 @@ function renderUsers(users) {
                 <td>${escapeHTML(user.phone_number)}</td>
                 <td><span class="badge ${roleBadgeClass}">${escapeHTML(user.role)}</span></td>
                 <td><span class="badge-level">${escapeHTML(user.access_level || 'N/A')}</span></td>
-                <td>${escapeHTML(user.location || 'N/A')}</td>
+                <td>${escapeHTML(locationText)}</td>
                 <td>${formattedDate}</td>
             </tr>
         `;
@@ -262,14 +284,50 @@ function updateStats(users) {
     statGuards.textContent = guards;
 }
 
+// Populate enrollment select fields from database lists
+function populateEnrollmentDropdowns() {
+    const roleSelect = document.getElementById('staff-role');
+    const accessSelect = document.getElementById('staff-access');
+    const locationSelect = document.getElementById('staff-location');
+
+    // Populate Roles Select
+    roleSelect.innerHTML = '<option value="" disabled selected>Select Role</option>';
+    rolesList.forEach(role => {
+        const option = document.createElement('option');
+        option.value = role.id;
+        option.textContent = role.name;
+        roleSelect.appendChild(option);
+    });
+
+    // Populate Access Levels Select
+    accessSelect.innerHTML = '<option value="" disabled selected>Select Access Level</option>';
+    levelsList.forEach(level => {
+        const option = document.createElement('option');
+        option.value = level.id;
+        option.textContent = level.name;
+        accessSelect.appendChild(option);
+    });
+
+    // Populate Locations Select
+    locationSelect.innerHTML = '<option value="" disabled selected>Select Location</option>';
+    locationsList.forEach(loc => {
+        if (loc.is_active) {
+            const option = document.createElement('option');
+            option.value = loc.id;
+            option.textContent = loc.name;
+            locationSelect.appendChild(option);
+        }
+    });
+}
+
 // Enroll New Staff Member
 enrollmentForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('staff-name').value.trim();
     const phone_number = document.getElementById('staff-phone').value.trim();
     const role = document.getElementById('staff-role').value;
-    const access_level = document.getElementById('staff-access').value.trim();
-    const location = document.getElementById('staff-location').value.trim();
+    const access_level = document.getElementById('staff-access').value;
+    const location_id = document.getElementById('staff-location').value;
     const submitBtn = document.getElementById('enroll-submit-btn');
 
     const originalBtnHTML = submitBtn.innerHTML;
@@ -288,7 +346,7 @@ enrollmentForm.addEventListener('submit', async (e) => {
                 phone_number,
                 role,
                 access_level,
-                location
+                location_id
             })
         });
 
@@ -323,13 +381,14 @@ searchInput.addEventListener('keyup', () => {
         const name = (user.name || '').toLowerCase();
         const phone = (user.phone_number || '').toLowerCase();
         const role = (user.role || '').toLowerCase();
-        const location = (user.location || '').toLowerCase();
+        const locationObj = user.location || {};
+        const locationName = (typeof locationObj === 'object' ? locationObj.name : locationObj || '').toLowerCase();
         const access = (user.access_level || '').toLowerCase();
 
         return name.includes(query) || 
                phone.includes(query) || 
                role.includes(query) ||
-               location.includes(query) ||
+               locationName.includes(query) ||
                access.includes(query);
     });
 
@@ -346,7 +405,10 @@ function closeModal() {
     enrollmentForm.reset();
 }
 
-openModalBtn.addEventListener('click', openModal);
+openModalBtn.addEventListener('click', () => {
+    populateEnrollmentDropdowns();
+    openModal();
+});
 closeModalBtn.addEventListener('click', closeModal);
 cancelEnrollBtn.addEventListener('click', closeModal);
 
@@ -398,9 +460,19 @@ menuRoles.addEventListener('click', (e) => {
     fetchRoles();
 });
 
+menuLocations.addEventListener('click', (e) => {
+    e.preventDefault();
+    setActiveMenu(menuLocations, locationsSection);
+    fetchLocations();
+});
+
 function setActiveMenu(menuItem, sectionItem) {
-    [menuStaff, menuPermissions, menuLevels, menuRoles].forEach(m => m.classList.remove('active'));
-    [staffSection, permissionsSection, levelsSection, rolesSection].forEach(s => s.style.display = 'none');
+    [menuStaff, menuPermissions, menuLevels, menuRoles, menuLocations].forEach(m => {
+        if (m) m.classList.remove('active');
+    });
+    [staffSection, permissionsSection, levelsSection, rolesSection, locationsSection].forEach(s => {
+        if (s) s.style.display = 'none';
+    });
     menuItem.classList.add('active');
     sectionItem.style.display = 'block';
 }
@@ -682,7 +754,7 @@ function renderLevels(levels) {
 
     levelsTableBody.innerHTML = levels.map(level => {
         const ownerText = level.admin_id 
-            ? `<div class="badge-owner" title="${escapeHTML(level.owner_email)}">${escapeHTML(level.owner_name)}</div>`
+            ? `<div class="badge-owner" data-tooltip="Name: ${escapeHTML(level.owner_name)}\nEmail: ${escapeHTML(level.owner_email)}\nRole: Admin">${escapeHTML(level.owner_name)}</div>`
             : `<div class="badge-system">System</div>`;
         return `
             <tr>
@@ -857,7 +929,7 @@ function renderRoles(roles) {
 
     rolesTableBody.innerHTML = roles.map(role => {
         const ownerText = role.admin_id 
-            ? `<div class="badge-owner" title="${escapeHTML(role.owner_email)}">${escapeHTML(role.owner_name)}</div>`
+            ? `<div class="badge-owner" data-tooltip="Name: ${escapeHTML(role.owner_name)}\nEmail: ${escapeHTML(role.owner_email)}\nRole: Admin">${escapeHTML(role.owner_name)}</div>`
             : `<div class="badge-system">System</div>`;
         const permissionsBadges = (role.permissions || []).map(p => 
             `<span class="badge badge-guard" style="margin-right: 4px; margin-bottom: 4px; font-size: 11px;">${escapeHTML(p.name)}</span>`
@@ -1059,6 +1131,288 @@ roleRefreshBtn.addEventListener('click', () => {
     showToast('Roles refreshed.', 'success');
 });
 
+// Fetch Locations List
+async function fetchLocations() {
+    locationsTableBody.innerHTML = `
+        <tr class="table-loading">
+            <td colspan="7">
+                <div class="loader-spinner"></div>
+                <span>Fetching locations...</span>
+            </td>
+        </tr>
+    `;
+
+    try {
+        const response = await fetch(`${API_URL}/locations`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            locationsList = resData.data;
+            renderLocations(locationsList);
+            updateLocationStats(resData.counts);
+        } else {
+            showToast(resData.error || 'Failed to retrieve locations.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to fetch locations from server.', 'error');
+        console.error(err);
+    }
+}
+
+// Render Locations to Table
+function renderLocations(locations) {
+    if (!locations || locations.length === 0) {
+        locationsTableBody.innerHTML = `
+            <tr class="table-empty">
+                <td colspan="7">
+                    <i class="fa-regular fa-folder-open"></i>
+                    <span>No locations found.</span>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    locationsTableBody.innerHTML = locations.map(loc => {
+        const checkedAttr = loc.is_active ? 'checked' : '';
+            
+        return `
+            <tr>
+                <td class="staff-name-col">${escapeHTML(loc.name)}</td>
+                <td>${escapeHTML(loc.address || 'N/A')}</td>
+                <td>${escapeHTML(loc.city || 'N/A')}</td>
+                <td>${escapeHTML(loc.zip_code || 'N/A')}</td>
+                <td style="text-align: center;"><span class="badge-level">${loc.nodes || 0}</span></td>
+                <td style="text-align: center;">
+                    <label class="switch" style="margin: 0 auto; display: inline-flex;">
+                        <input type="checkbox" ${checkedAttr} onchange="toggleLocationStatus(${loc.id})">
+                        <span class="slider round"></span>
+                    </label>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon btn-view" onclick="openViewLocationModal(${loc.id})" title="View" style="background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2);">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                        <button class="btn-icon btn-edit" onclick="openEditLocationModal(${loc.id})" title="Edit">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" onclick="deleteLocation(${loc.id})" title="Delete">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Update Location stats cards
+function updateLocationStats(counts) {
+    if (!counts) return;
+    statTotalLocations.textContent = counts.sites || 0;
+    statLocationsNodes.textContent = counts.nodes || 0;
+    statLocationsActive.textContent = counts.live || 0;
+}
+
+// Modal Actions for Locations
+function openAddLocationModal() {
+    locationModalTitle.textContent = 'Add New Location';
+    locationSubmitText.textContent = 'Save Location';
+    document.getElementById('location-id').value = '';
+    locationForm.reset();
+    document.getElementById('location-active').checked = true;
+    document.getElementById('location-active').disabled = false;
+    
+    // Enable form fields
+    setFormFieldsDisabled(locationForm, false);
+    document.getElementById('location-submit-btn').style.display = 'inline-flex';
+    locationModal.classList.add('open');
+}
+
+function openEditLocationModal(id) {
+    const loc = locationsList.find(l => l.id === id);
+    if (!loc) return;
+    locationModalTitle.textContent = 'Edit Location';
+    locationSubmitText.textContent = 'Save Changes';
+    document.getElementById('location-id').value = loc.id;
+    document.getElementById('location-name').value = loc.name;
+    document.getElementById('location-address').value = loc.address || '';
+    document.getElementById('location-city').value = loc.city || '';
+    document.getElementById('location-zip').value = loc.zip_code || '';
+    document.getElementById('location-active').checked = loc.is_active;
+    document.getElementById('location-active').disabled = false;
+    
+    // Enable form fields
+    setFormFieldsDisabled(locationForm, false);
+    document.getElementById('location-submit-btn').style.display = 'inline-flex';
+    locationModal.classList.add('open');
+}
+
+function openViewLocationModal(id) {
+    const loc = locationsList.find(l => l.id === id);
+    if (!loc) return;
+    locationModalTitle.textContent = 'View Location';
+    document.getElementById('location-id').value = loc.id;
+    document.getElementById('location-name').value = loc.name;
+    document.getElementById('location-address').value = loc.address || '';
+    document.getElementById('location-city').value = loc.city || '';
+    document.getElementById('location-zip').value = loc.zip_code || '';
+    document.getElementById('location-active').checked = loc.is_active;
+    document.getElementById('location-active').disabled = true;
+    
+    // Disable form fields
+    setFormFieldsDisabled(locationForm, true);
+    document.getElementById('location-submit-btn').style.display = 'none';
+    locationModal.classList.add('open');
+}
+
+function setFormFieldsDisabled(form, disabled) {
+    const inputs = form.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"])');
+    inputs.forEach(input => input.disabled = disabled);
+}
+
+function closeLocationModal() {
+    locationModal.classList.remove('open');
+    locationForm.reset();
+}
+
+// Toggle status of a location
+async function toggleLocationStatus(id) {
+    try {
+        const response = await fetch(`${API_URL}/locations/${id}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast(resData.message || 'Location status updated.', 'success');
+            fetchLocations();
+        } else {
+            showToast(resData.error || 'Failed to toggle location status.', 'error');
+            fetchLocations();
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+        fetchLocations();
+    }
+}
+
+// Delete a location
+async function deleteLocation(id) {
+    if (!confirm('Are you sure you want to delete this location?')) return;
+
+    try {
+        const response = await fetch(`${API_URL}/locations/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast('Location deleted successfully!', 'success');
+            fetchLocations();
+        } else {
+            showToast(resData.error || 'Failed to delete location.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+    }
+}
+
+// Location Form Submit
+locationForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('location-id').value;
+    const name = document.getElementById('location-name').value.trim();
+    const address = document.getElementById('location-address').value.trim();
+    const city = document.getElementById('location-city').value.trim();
+    const zip_code = document.getElementById('location-zip').value.trim();
+    const is_active = document.getElementById('location-active').checked ? 1 : 0;
+    
+    const submitBtn = document.getElementById('location-submit-btn');
+    const originalBtnHTML = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<div class="loader-spinner"></div> <span>Saving...</span>`;
+
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_URL}/locations/${id}` : `${API_URL}/locations`;
+
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ name, address, city, zip_code, is_active })
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast(id ? 'Location updated successfully!' : 'Location created successfully!', 'success');
+            closeLocationModal();
+            fetchLocations();
+        } else {
+            showToast(resData.error || 'Failed to save location.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error. Failed to save location.', 'error');
+        console.error(err);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnHTML;
+    }
+});
+
+// Location Search
+locationSearchInput.addEventListener('keyup', () => {
+    const query = locationSearchInput.value.toLowerCase().trim();
+    if (!query) {
+        renderLocations(locationsList);
+        return;
+    }
+
+    const filtered = locationsList.filter(l => {
+        const name = (l.name || '').toLowerCase();
+        const address = (l.address || '').toLowerCase();
+        const city = (l.city || '').toLowerCase();
+        const zip = (l.zip_code || '').toLowerCase();
+        return name.includes(query) || address.includes(query) || city.includes(query) || zip.includes(query);
+    });
+
+    renderLocations(filtered);
+});
+
+locationRefreshBtn.addEventListener('click', () => {
+    fetchLocations();
+    showToast('Locations list refreshed.', 'success');
+});
+
+// Location Modal bindings
+openLocationModalBtn.addEventListener('click', openAddLocationModal);
+closeLocationModalBtn.addEventListener('click', closeLocationModal);
+cancelLocationBtn.addEventListener('click', closeLocationModal);
+locationModal.addEventListener('click', (e) => {
+    if (e.target === locationModal) {
+        closeLocationModal();
+    }
+});
+
 // Expose level and role functions globally
 window.openEditLevelModal = openEditLevelModal;
 window.deleteLevel = deleteLevel;
@@ -1069,6 +1423,12 @@ window.deleteRole = deleteRole;
 window.togglePermissionStatus = togglePermissionStatus;
 window.openEditPermissionModal = openEditPermissionModal;
 window.deletePermission = deletePermission;
+
+// Expose location functions globally
+window.openViewLocationModal = openViewLocationModal;
+window.openEditLocationModal = openEditLocationModal;
+window.deleteLocation = deleteLocation;
+window.toggleLocationStatus = toggleLocationStatus;
 
 // HTML Escaping Utility to prevent XSS injection
 function escapeHTML(str) {

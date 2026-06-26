@@ -37,8 +37,8 @@ class UserController {
     // 3. POST: Add User (Staff Enrollment)
     async addStaff(req, res) {
         try {
-            const { name, phone_number, role, access_level, location } = req.body;
-            const newUser = await UserService.addStaff(name, phone_number, role, access_level, location, req.user);
+            const { name, phone_number, role, access_level, location_id } = req.body;
+            const newUser = await UserService.addStaff(name, phone_number, role, access_level, location_id, req.user);
             res.status(201).json({
                 status: true,
                 data: newUser
@@ -239,8 +239,8 @@ class UserController {
     async updateStaff(req, res) {
         try {
             const staffId = req.params.id;
-            const { name, phone_number, role, access_level, location } = req.body;
-            const updatedStaff = await UserService.updateStaff(staffId, req.user, name, phone_number, role, access_level, location);
+            const { name, phone_number, role, access_level, location_id } = req.body;
+            const updatedStaff = await UserService.updateStaff(staffId, req.user, name, phone_number, role, access_level, location_id);
             res.status(200).json({
                 status: true,
                 message: 'Staff member updated successfully',

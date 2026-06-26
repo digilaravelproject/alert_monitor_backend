@@ -1,5 +1,5 @@
 const validateAddOrUpdateUser = (req, res, next) => {
-    const { name, phone_number, role, access_level, location } = req.body;
+    const { name, phone_number, role, access_level, location_id } = req.body;
     const errors = [];
 
     if (!name || typeof name !== 'string' || name.trim() === '') {
@@ -19,7 +19,7 @@ const validateAddOrUpdateUser = (req, res, next) => {
     if (access_level === undefined || access_level === null || (typeof access_level !== 'string' && typeof access_level !== 'number') || (typeof access_level === 'string' && access_level.trim() === '')) {
         errors.push('Access level is required');
     }
-    if (!location || typeof location !== 'string' || location.trim() === '') {
+    if (location_id === undefined || location_id === null || (typeof location_id !== 'string' && typeof location_id !== 'number') || (typeof location_id === 'string' && location_id.trim() === '') || isNaN(parseInt(location_id, 10))) {
         errors.push('Location is required');
     }
 
