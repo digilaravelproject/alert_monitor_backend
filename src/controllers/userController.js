@@ -288,6 +288,42 @@ class UserController {
             });
         }
     }
+
+    // 15. POST: Save FCM Token
+    async saveFcmToken(req, res) {
+        try {
+            const { fcm_token, device_type } = req.body;
+            const userId = req.user.id;
+            await UserService.saveFcmToken(userId, fcm_token, device_type);
+            res.status(200).json({
+                status: true,
+                message: 'FCM token saved successfully'
+            });
+        } catch (error) {
+            res.status(error.status || 500).json({
+                status: false,
+                error: error.message
+            });
+        }
+    }
+
+    // 16. DELETE: Remove FCM Token
+    async deleteFcmToken(req, res) {
+        try {
+            const { fcm_token } = req.body;
+            const userId = req.user.id;
+            await UserService.deleteFcmToken(userId, fcm_token);
+            res.status(200).json({
+                status: true,
+                message: 'FCM token deleted successfully'
+            });
+        } catch (error) {
+            res.status(error.status || 500).json({
+                status: false,
+                error: error.message
+            });
+        }
+    }
 }
 
 module.exports = new UserController();

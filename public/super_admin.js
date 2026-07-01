@@ -30,6 +30,22 @@ const passwordInput = document.getElementById('password');
 const adminEmailDisplay = document.getElementById('admin-email-display');
 
 // Permissions DOM Elements
+const menuVendors = document.getElementById('menu-vendors');
+const vendorsSection = document.getElementById('vendors-section');
+const vendorsTableBody = document.getElementById('vendors-table-body');
+const vendorSearchInput = document.getElementById('vendor-search-input');
+const vendorRefreshBtn = document.getElementById('vendor-refresh-btn');
+const openVendorModalBtn = document.getElementById('open-vendor-modal-btn');
+const closeVendorModalBtn = document.getElementById('close-vendor-modal-btn');
+const cancelVendorBtn = document.getElementById('cancel-vendor-btn');
+const vendorModal = document.getElementById('vendor-modal');
+const vendorForm = document.getElementById('vendor-form');
+const vendorModalTitle = document.getElementById('vendor-modal-title');
+const vendorSubmitText = document.getElementById('vendor-submit-text');
+const statTotalVendors = document.getElementById('stat-total-vendors');
+const statActiveVendors = document.getElementById('stat-active-vendors');
+const statBlockedVendors = document.getElementById('stat-blocked-vendors');
+
 const menuStaff = document.getElementById('menu-staff');
 const menuPermissions = document.getElementById('menu-permissions');
 const menuLevels = document.getElementById('menu-levels');
@@ -203,12 +219,22 @@ async function fetchUsers() {
     // Show table loader
     usersTableBody.innerHTML = `
         <tr class="table-loading">
-            <td colspan="6">
+            <td colspan="7">
                 <div class="loader-spinner"></div>
                 <span>Fetching staff records...</span>
             </td>
         </tr>
     `;
+    if (vendorsTableBody) {
+        vendorsTableBody.innerHTML = `
+            <tr class="table-loading">
+                <td colspan="5">
+                    <div class="loader-spinner"></div>
+                    <span>Fetching vendor records...</span>
+                </td>
+            </tr>
+        `;
+    }
 
     try {
         const response = await fetch(`${API_URL}/users`, {
@@ -222,8 +248,14 @@ async function fetchUsers() {
 
         if (response.ok && resData.status) {
             usersList = resData.data;
-            renderUsers(usersList);
-            updateStats(usersList);
+            const staffUsers = usersList.filter(u => u.role !== 'Admin');
+            const vendorUsers = usersList.filter(u => u.role === 'Admin');
+
+            renderUsers(staffUsers);
+            updateStaffStats(staffUsers);
+
+            renderVendors(vendorUsers);
+            updateVendorStats(vendorUsers);
         } else {
             showToast(resData.error || 'Failed to retrieve staff records.', 'error');
             if (response.status === 401 || response.status === 403) {
@@ -241,7 +273,7 @@ function renderUsers(users) {
     if (!users || users.length === 0) {
         usersTableBody.innerHTML = `
             <tr class="table-empty">
-                <td colspan="6">
+                <td colspan="7">
                     <i class="fa-regular fa-folder-open"></i>
                     <span>No staff records found.</span>
                 </td>
@@ -251,7 +283,6 @@ function renderUsers(users) {
     }
 
     usersTableBody.innerHTML = users.map(user => {
-        const roleBadgeClass = user.role === 'Admin' ? 'badge-admin' : 'badge-guard';
         const formattedDate = user.created_at 
             ? new Date(user.created_at).toLocaleDateString('en-US', {
                 year: 'numeric',
@@ -269,24 +300,94 @@ function renderUsers(users) {
             <tr>
                 <td class="staff-name-col">${escapeHTML(user.name)}</td>
                 <td>${escapeHTML(user.phone_number)}</td>
-                <td><span class="badge ${roleBadgeClass}">${escapeHTML(user.role)}</span></td>
+                <td><span class="badge badge-guard">${escapeHTML(user.role)}</span></td>
                 <td><span class="badge-level">${escapeHTML(user.access_level || 'N/A')}</span></td>
                 <td>${escapeHTML(locationText)}</td>
                 <td>${formattedDate}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon btn-view" onclick="openViewStaffModal(${user.id})" title="View">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                        <button class="btn-icon btn-edit" onclick="openEditStaffModal(${user.id})" title="Edit">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" onclick="deleteStaff(${user.id})" title="Delete">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </td>
             </tr>
         `;
     }).join('');
 }
 
-// Update Statistics Counters
-function updateStats(users) {
-    const total = users.length;
-    const admins = users.filter(u => u.role === 'Admin').length;
-    const guards = users.filter(u => u.role === 'Security Guard').length;
+// Render Vendors to Table
+function renderVendors(vendors) {
+    if (!vendors || vendors.length === 0) {
+        vendorsTableBody.innerHTML = `
+            <tr class="table-empty">
+                <td colspan="5">
+                    <i class="fa-regular fa-folder-open"></i>
+                    <span>No vendor records found.</span>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    vendorsTableBody.innerHTML = vendors.map(vendor => {
+        const formattedDate = vendor.created_at 
+            ? new Date(vendor.created_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })
+            : 'N/A';
+            
+        return `
+            <tr>
+                <td class="staff-name-col">${escapeHTML(vendor.name)}</td>
+                <td>${escapeHTML(vendor.phone_number)}</td>
+                <td><span class="badge badge-admin">${escapeHTML(vendor.role)}</span></td>
+                <td>${formattedDate}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon btn-edit" onclick="openEditVendorModal(${vendor.id})" title="Edit">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" onclick="deleteVendor(${vendor.id})" title="Delete">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Update Statistics Counters for Staff
+function updateStaffStats(staffUsers) {
+    const total = staffUsers.length;
+    const managers = staffUsers.filter(u => u.role === 'Manager' || u.role === 'Supervisor').length;
+    const guards = staffUsers.filter(u => u.role === 'Security Guard').length;
 
     statTotalStaff.textContent = total;
-    statAdmins.textContent = admins;
+    statAdmins.textContent = managers;
     statGuards.textContent = guards;
+}
+
+// Update Statistics Counters for Vendors
+function updateVendorStats(vendorUsers) {
+    const total = vendorUsers.length;
+    const active = vendorUsers.filter(u => !u.is_blocked).length;
+    const blocked = total - active;
+
+    statTotalVendors.textContent = total;
+    statActiveVendors.textContent = active;
+    statBlockedVendors.textContent = blocked;
 }
 
 // Populate enrollment select fields from database lists
@@ -295,13 +396,15 @@ function populateEnrollmentDropdowns() {
     const accessSelect = document.getElementById('staff-access');
     const locationSelect = document.getElementById('staff-location');
 
-    // Populate Roles Select
+    // Populate Roles Select (excluding Admin)
     roleSelect.innerHTML = '<option value="" disabled selected>Select Role</option>';
     rolesList.forEach(role => {
-        const option = document.createElement('option');
-        option.value = role.id;
-        option.textContent = role.name;
-        roleSelect.appendChild(option);
+        if (role.name !== 'Admin') {
+            const option = document.createElement('option');
+            option.value = role.id;
+            option.textContent = role.name;
+            roleSelect.appendChild(option);
+        }
     });
 
     // Populate Access Levels Select
@@ -325,9 +428,10 @@ function populateEnrollmentDropdowns() {
     });
 }
 
-// Enroll New Staff Member
+// Edit Staff Member (Form Submit Handler)
 enrollmentForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const staffId = document.getElementById('staff-id').value;
     const name = document.getElementById('staff-name').value.trim();
     const phone_number = document.getElementById('staff-phone').value.trim();
     const role = document.getElementById('staff-role').value;
@@ -340,8 +444,8 @@ enrollmentForm.addEventListener('submit', async (e) => {
     submitBtn.innerHTML = `<div class="loader-spinner"></div> <span>Saving...</span>`;
 
     try {
-        const response = await fetch(`${API_URL}/add-user`, {
-            method: 'POST',
+        const response = await fetch(`${API_URL}/staff/${staffId}`, {
+            method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${accessToken}`
@@ -358,12 +462,11 @@ enrollmentForm.addEventListener('submit', async (e) => {
         const resData = await response.json();
 
         if (response.ok && resData.status) {
-            showToast('Staff member enrolled successfully!', 'success');
+            showToast('Staff record updated successfully!', 'success');
             closeModal();
-            enrollmentForm.reset();
             fetchUsers();
         } else {
-            showToast(resData.error || 'Failed to save staff record.', 'error');
+            showToast(resData.error || 'Failed to update staff record.', 'error');
         }
     } catch (err) {
         showToast('Network error. Failed to save record.', 'error');
@@ -374,15 +477,16 @@ enrollmentForm.addEventListener('submit', async (e) => {
     }
 });
 
-// Search Filter Input Listener
+// Search Filter Input Listener for Staff
 searchInput.addEventListener('keyup', () => {
     const query = searchInput.value.toLowerCase().trim();
+    const staffUsers = usersList.filter(u => u.role !== 'Admin');
     if (!query) {
-        renderUsers(usersList);
+        renderUsers(staffUsers);
         return;
     }
 
-    const filtered = usersList.filter(user => {
+    const filtered = staffUsers.filter(user => {
         const name = (user.name || '').toLowerCase();
         const phone = (user.phone_number || '').toLowerCase();
         const role = (user.role || '').toLowerCase();
@@ -400,7 +504,26 @@ searchInput.addEventListener('keyup', () => {
     renderUsers(filtered);
 });
 
-// Modal Actions
+// Search Filter Input Listener for Vendors
+vendorSearchInput.addEventListener('keyup', () => {
+    const query = vendorSearchInput.value.toLowerCase().trim();
+    const vendorUsers = usersList.filter(u => u.role === 'Admin');
+    if (!query) {
+        renderVendors(vendorUsers);
+        return;
+    }
+
+    const filtered = vendorUsers.filter(user => {
+        const name = (user.name || '').toLowerCase();
+        const phone = (user.phone_number || '').toLowerCase();
+
+        return name.includes(query) || phone.includes(query);
+    });
+
+    renderVendors(filtered);
+});
+
+// Modal Actions for Staff
 function openModal() {
     enrollmentModal.classList.add('open');
 }
@@ -408,12 +531,11 @@ function openModal() {
 function closeModal() {
     enrollmentModal.classList.remove('open');
     enrollmentForm.reset();
+    setFormFieldsDisabled(enrollmentForm, false);
+    document.getElementById('enroll-submit-btn').style.display = 'inline-flex';
+    document.getElementById('enroll-submit-btn').querySelector('span').textContent = 'Save Record';
 }
 
-openModalBtn.addEventListener('click', () => {
-    populateEnrollmentDropdowns();
-    openModal();
-});
 closeModalBtn.addEventListener('click', closeModal);
 cancelEnrollBtn.addEventListener('click', closeModal);
 
@@ -424,11 +546,208 @@ enrollmentModal.addEventListener('click', (e) => {
     }
 });
 
-// Refresh button
+// Staff Refresh button
 refreshBtn.addEventListener('click', () => {
     fetchUsers();
     showToast('Records refreshed.', 'success');
 });
+
+// Vendor Modal Actions
+function openAddVendorModal() {
+    vendorModalTitle.textContent = 'Enroll New Vendor';
+    vendorSubmitText.textContent = 'Save Record';
+    document.getElementById('vendor-id').value = '';
+    vendorForm.reset();
+    vendorModal.classList.add('open');
+}
+
+function openEditVendorModal(id) {
+    const vendor = usersList.find(u => u.id === id);
+    if (!vendor) return;
+    vendorModalTitle.textContent = 'Edit Vendor';
+    vendorSubmitText.textContent = 'Save Changes';
+    document.getElementById('vendor-id').value = vendor.id;
+    document.getElementById('vendor-name').value = vendor.name;
+    document.getElementById('vendor-phone').value = vendor.phone_number;
+    vendorModal.classList.add('open');
+}
+
+function closeVendorModal() {
+    vendorModal.classList.remove('open');
+    vendorForm.reset();
+}
+
+// Event Listeners for Vendor Modal
+openVendorModalBtn.addEventListener('click', openAddVendorModal);
+closeVendorModalBtn.addEventListener('click', closeVendorModal);
+cancelVendorBtn.addEventListener('click', closeVendorModal);
+vendorModal.addEventListener('click', (e) => {
+    if (e.target === vendorModal) {
+        closeVendorModal();
+    }
+});
+
+// Vendor Form Submit Handler
+vendorForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const vendorId = document.getElementById('vendor-id').value;
+    const name = document.getElementById('vendor-name').value.trim();
+    const phone_number = document.getElementById('vendor-phone').value.trim();
+    const submitBtn = document.getElementById('vendor-submit-btn');
+
+    const originalBtnHTML = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<div class="loader-spinner"></div> <span>Saving...</span>`;
+
+    // Find role ID for 'Admin'
+    const adminRole = rolesList.find(r => r.name === 'Admin');
+    const adminRoleId = adminRole ? adminRole.id : null;
+
+    const payload = {
+        name,
+        phone_number,
+        role: adminRoleId || 'Admin',
+        access_level: 'null',
+        location_id: 'null'
+    };
+
+    const isEdit = vendorId !== '';
+    const url = isEdit ? `${API_URL}/staff/${vendorId}` : `${API_URL}/add-user`;
+    const method = isEdit ? 'PUT' : 'POST';
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast(isEdit ? 'Vendor record updated successfully!' : 'Vendor enrolled successfully!', 'success');
+            closeVendorModal();
+            fetchUsers();
+        } else {
+            showToast(resData.error || 'Failed to save vendor record.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error. Failed to save record.', 'error');
+        console.error(err);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnHTML;
+    }
+});
+
+// Vendor Refresh Button
+vendorRefreshBtn.addEventListener('click', () => {
+    fetchUsers();
+    showToast('Records refreshed.', 'success');
+});
+
+// Staff Action Handlers
+function openViewStaffModal(id) {
+    const user = usersList.find(u => u.id === id);
+    if (!user) return;
+    
+    document.querySelector('#enrollment-modal h2').textContent = 'View Staff Details';
+    document.getElementById('staff-id').value = user.id;
+    document.getElementById('staff-name').value = user.name;
+    document.getElementById('staff-phone').value = user.phone_number;
+    
+    populateEnrollmentDropdowns();
+    
+    const roleSelect = document.getElementById('staff-role');
+    const accessSelect = document.getElementById('staff-access');
+    const locationSelect = document.getElementById('staff-location');
+    
+    if (user.role_id) roleSelect.value = user.role_id;
+    if (user.level_id) accessSelect.value = user.level_id;
+    if (user.location && user.location.id) locationSelect.value = user.location.id;
+    
+    setFormFieldsDisabled(enrollmentForm, true);
+    document.getElementById('enroll-submit-btn').style.display = 'none';
+    
+    openModal();
+}
+
+function openEditStaffModal(id) {
+    const user = usersList.find(u => u.id === id);
+    if (!user) return;
+    
+    document.querySelector('#enrollment-modal h2').textContent = 'Edit Staff';
+    document.getElementById('staff-id').value = user.id;
+    document.getElementById('staff-name').value = user.name;
+    document.getElementById('staff-phone').value = user.phone_number;
+    
+    populateEnrollmentDropdowns();
+    
+    const roleSelect = document.getElementById('staff-role');
+    const accessSelect = document.getElementById('staff-access');
+    const locationSelect = document.getElementById('staff-location');
+    
+    if (user.role_id) roleSelect.value = user.role_id;
+    if (user.level_id) accessSelect.value = user.level_id;
+    if (user.location && user.location.id) locationSelect.value = user.location.id;
+    
+    setFormFieldsDisabled(enrollmentForm, false);
+    document.getElementById('enroll-submit-btn').style.display = 'inline-flex';
+    document.getElementById('enroll-submit-btn').querySelector('span').textContent = 'Save Changes';
+    
+    openModal();
+}
+
+async function deleteStaff(id) {
+    if (!confirm('Are you sure you want to delete this staff member?')) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/staff/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            showToast('Staff member deleted successfully!', 'success');
+            fetchUsers();
+        } else {
+            showToast(resData.error || 'Failed to delete staff member.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+        console.error(err);
+    }
+}
+
+async function deleteVendor(id) {
+    if (!confirm('Are you sure you want to delete this vendor?')) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/staff/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            showToast('Vendor deleted successfully!', 'success');
+            fetchUsers();
+        } else {
+            showToast(resData.error || 'Failed to delete vendor.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+        console.error(err);
+    }
+}
 
 // Logout
 function logout() {
@@ -442,6 +761,11 @@ function logout() {
 logoutBtn.addEventListener('click', logout);
 
 // Sidebar Switching Logic
+menuVendors.addEventListener('click', (e) => {
+    e.preventDefault();
+    setActiveMenu(menuVendors, vendorsSection);
+});
+
 menuStaff.addEventListener('click', (e) => {
     e.preventDefault();
     setActiveMenu(menuStaff, staffSection);
@@ -478,10 +802,10 @@ menuDevices.addEventListener('click', (e) => {
 });
 
 function setActiveMenu(menuItem, sectionItem) {
-    [menuStaff, menuPermissions, menuLevels, menuRoles, menuLocations, menuDevices].forEach(m => {
+    [menuVendors, menuStaff, menuPermissions, menuLevels, menuRoles, menuLocations, menuDevices].forEach(m => {
         if (m) m.classList.remove('active');
     });
-    [staffSection, permissionsSection, levelsSection, rolesSection, locationsSection, devicesSection].forEach(s => {
+    [vendorsSection, staffSection, permissionsSection, levelsSection, rolesSection, locationsSection, devicesSection].forEach(s => {
         if (s) s.style.display = 'none';
     });
     menuItem.classList.add('active');
@@ -1440,6 +1764,15 @@ window.openViewLocationModal = openViewLocationModal;
 window.openEditLocationModal = openEditLocationModal;
 window.deleteLocation = deleteLocation;
 window.toggleLocationStatus = toggleLocationStatus;
+
+// Expose staff functions globally
+window.openViewStaffModal = openViewStaffModal;
+window.openEditStaffModal = openEditStaffModal;
+window.deleteStaff = deleteStaff;
+
+// Expose vendor functions globally
+window.openEditVendorModal = openEditVendorModal;
+window.deleteVendor = deleteVendor;
 
 // HTML Escaping Utility to prevent XSS injection
 function escapeHTML(str) {

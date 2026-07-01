@@ -69,7 +69,11 @@
             </div>
 
             <div class="sidebar-menu">
-                <a href="#" class="menu-item active" id="menu-staff">
+                <a href="#" class="menu-item active" id="menu-vendors">
+                    <i class="fa-solid fa-shop"></i>
+                    <span>Vendor Enrollment</span>
+                </a>
+                <a href="#" class="menu-item" id="menu-staff">
                     <i class="fa-solid fa-users-gear"></i>
                     <span>Staff Enrollment</span>
                 </a>
@@ -114,16 +118,96 @@
 
         <!-- Main Dashboard Content -->
         <main class="main-content">
-            <div id="staff-section">
+            <!-- Vendor Enrollment Section -->
+            <div id="vendors-section">
+                <header class="content-header">
+                    <div class="header-title">
+                        <h1>Vendor Enrollment</h1>
+                        <p class="subtitle">Enroll and manage vendors and administrators</p>
+                    </div>
+                    <button id="open-vendor-modal-btn" class="btn btn-primary">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Enroll Vendor</span>
+                    </button>
+                </header>
+
+                <!-- Stats Section -->
+                <section class="stats-grid">
+                    <div class="stats-card card-blue">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-shop"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Total Vendors</span>
+                            <h3 id="stat-total-vendors">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="stats-card card-purple">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Active Vendors</span>
+                            <h3 id="stat-active-vendors">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="stats-card card-teal">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-user-slash"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Blocked Vendors</span>
+                            <h3 id="stat-blocked-vendors">0</h3>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Table View Section -->
+                <section class="table-section">
+                    <div class="table-actions">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="vendor-search-input" placeholder="Search by name or phone...">
+                        </div>
+                        <button id="vendor-refresh-btn" class="btn btn-secondary">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Phone Number</th>
+                                    <th>Role</th>
+                                    <th>Enrolled Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vendors-table-body">
+                                <!-- Populated dynamically via JS -->
+                                <tr class="table-loading">
+                                    <td colspan="5">
+                                        <div class="loader-spinner"></div>
+                                        <span>Fetching vendor records...</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Staff Enrollment Section -->
+            <div id="staff-section" style="display: none;">
                 <header class="content-header">
                     <div class="header-title">
                         <h1>Staff Enrollment</h1>
                         <p class="subtitle">Enroll and manage security personnel and administrators</p>
                     </div>
-                    <button id="open-modal-btn" class="btn btn-primary">
-                        <i class="fa-solid fa-plus"></i>
-                        <span>Enroll Staff</span>
-                    </button>
                 </header>
 
                 <!-- Stats Section -->
@@ -143,7 +227,7 @@
                             <i class="fa-solid fa-user-shield"></i>
                         </div>
                         <div class="stats-details">
-                            <span class="stats-title">Admins</span>
+                            <span class="stats-title">Managers</span>
                             <h3 id="stat-admins">0</h3>
                         </div>
                     </div>
@@ -181,12 +265,13 @@
                                     <th>Access Level</th>
                                     <th>Location</th>
                                     <th>Enrolled Date</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="users-table-body">
                                 <!-- Populated dynamically via JS -->
                                 <tr class="table-loading">
-                                    <td colspan="6">
+                                    <td colspan="7">
                                         <div class="loader-spinner"></div>
                                         <span>Fetching staff records...</span>
                                     </td>
@@ -500,6 +585,7 @@
             </header>
             
             <form id="enrollment-form" class="modal-form">
+                <input type="hidden" id="staff-id">
                 <div class="form-row">
                     <div class="form-group col-12">
                         <label for="staff-name"><i class="fa-regular fa-user"></i> Full Name</label>
@@ -539,6 +625,43 @@
                     <button type="button" id="cancel-enroll-btn" class="btn btn-secondary">Cancel</button>
                     <button type="submit" id="enroll-submit-btn" class="btn btn-primary">
                         <span>Save Record</span>
+                        <i class="fa-solid fa-floppy-disk"></i>
+                    </button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+    <!-- VENDOR MODAL -->
+    <div id="vendor-modal" class="modal-wrapper">
+        <div class="modal-card">
+            <header class="modal-header">
+                <h2 id="vendor-modal-title">Enroll New Vendor</h2>
+                <button id="close-vendor-modal-btn" class="modal-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <form id="vendor-form" class="modal-form">
+                <input type="hidden" id="vendor-id">
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="vendor-name"><i class="fa-regular fa-user"></i> Full Name</label>
+                        <input type="text" id="vendor-name" placeholder="John Doe" required autocomplete="name">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="vendor-phone"><i class="fa-solid fa-phone"></i> Mobile Number</label>
+                        <input type="text" id="vendor-phone" placeholder="9876543210" required autocomplete="tel">
+                    </div>
+                </div>
+
+                <footer class="modal-footer">
+                    <button type="button" id="cancel-vendor-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" id="vendor-submit-btn" class="btn btn-primary">
+                        <span id="vendor-submit-text">Save Record</span>
                         <i class="fa-solid fa-floppy-disk"></i>
                     </button>
                 </footer>

@@ -252,6 +252,32 @@ async function updateSchema() {
                 );
                 PRINT 'Table acknowledged_alerts created.';
             END
+
+            -- Create user_fcm_tokens table if it does not exist
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[user_fcm_tokens]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[user_fcm_tokens] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    fcm_token NVARCHAR(450) NOT NULL,
+                    device_type NVARCHAR(50) NULL,
+                    created_at DATETIME DEFAULT GETDATE(),
+                    updated_at DATETIME DEFAULT GETDATE(),
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    CONSTRAINT UQ_user_fcm UNIQUE (user_id, fcm_token)
+                );
+                PRINT 'Table user_fcm_tokens created.';
+            END
+
+            -- Create notification_tracker table if it does not exist
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[notification_tracker]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[notification_tracker] (
+                    key_name NVARCHAR(100) PRIMARY KEY,
+                    last_id BIGINT NOT NULL
+                );
+                PRINT 'Table notification_tracker created.';
+            END
         `);
 
         console.log('Database migration completed successfully.');

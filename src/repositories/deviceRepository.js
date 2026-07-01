@@ -33,10 +33,29 @@ class DeviceRepository {
         let query = `
             SELECT d.id, d.name, d.serial_number, d.type, d.is_active, d.created_at,
                    l.id AS location_id, l.name AS location_name, l.admin_id AS location_admin_id,
-                   u.name AS owner_name, u.email AS owner_email
+                   u.name AS owner_name, u.email AS owner_email,
+                   lf.Id AS latest_feed_id, lf.ev, lf.ts, lf.Ts_date, lf.mic_db, lf.x, lf.y, lf.spd, lf.mov, lf.fall, lf.rssi, lf.bat_v, lf.bat_pct, lf.charging, lf.err, lf.msg, lf.status AS feed_status,
+                   CASE WHEN active_alert.Id IS NOT NULL THEN 1 ELSE 0 END AS new_alert,
+                   active_alert.is_acknowledged
             FROM devices d
             INNER JOIN locations l ON d.location_id = l.id
             LEFT JOIN users u ON l.admin_id = u.id
+            OUTER APPLY (
+                SELECT TOP 1 *
+                FROM tbl_DeviceFeedData lf
+                WHERE lf.node = d.serial_number OR CAST(lf.ts AS NVARCHAR(100)) = d.serial_number
+                ORDER BY lf.Id DESC
+            ) lf
+            OUTER APPLY (
+                SELECT TOP 1 a.Id,
+                       CASE WHEN ack.feed_id IS NOT NULL THEN 1 ELSE 0 END AS is_acknowledged
+                FROM tbl_DeviceFeedData a
+                LEFT JOIN acknowledged_alerts ack ON a.Id = ack.feed_id
+                WHERE (a.node = d.serial_number OR CAST(a.ts AS NVARCHAR(100)) = d.serial_number)
+                  AND a.ev <> 'hb'
+                  AND a.Id NOT IN (SELECT feed_id FROM dismissed_alerts)
+                ORDER BY a.Id DESC
+            ) active_alert
             WHERE d.id = @id
         `;
         if (!isSuperAdmin && adminId !== null) {
@@ -46,6 +65,14 @@ class DeviceRepository {
         const result = await request.query(query);
         const dev = result.recordset[0];
         if (!dev) return null;
+
+        let status = 'ACTIVE';
+        if (!dev.is_active) {
+            status = 'DEACTIVE';
+        } else if (dev.new_alert === 1) {
+            status = 'ACTIVE ALERT';
+        }
+
         return {
             id: dev.id,
             name: dev.name,
@@ -60,6 +87,29 @@ class DeviceRepository {
             admin: dev.owner_name ? {
                 name: dev.owner_name,
                 email: dev.owner_email
+            } : null,
+            battery_percentage: dev.bat_pct !== null ? Number(dev.bat_pct) : 100,
+            new_alert: dev.new_alert,
+            is_acknowledged: dev.is_acknowledged || 0,
+            status: status,
+            latest_event: dev.latest_feed_id ? {
+                id: dev.latest_feed_id,
+                ev: dev.ev,
+                ts: dev.ts !== null ? Number(dev.ts) : null,
+                ts_date: dev.Ts_date,
+                mic_db: dev.mic_db !== null ? Number(dev.mic_db) : null,
+                x: dev.x,
+                y: dev.y,
+                spd: dev.spd,
+                mov: dev.mov,
+                fall: dev.fall,
+                rssi: dev.rssi,
+                bat_v: dev.bat_v !== null ? Number(dev.bat_v) : null,
+                bat_pct: dev.bat_pct !== null ? Number(dev.bat_pct) : null,
+                charging: dev.charging,
+                err: dev.err !== null ? Number(dev.err) : null,
+                msg: dev.msg,
+                status: dev.feed_status
             } : null
         };
     }

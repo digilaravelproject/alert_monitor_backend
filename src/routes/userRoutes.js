@@ -86,4 +86,8 @@ router.post('/alerts/:feedId/acknowledge', authenticateToken, deviceController.a
 router.get('/devices/:id/alerts', authenticateToken, deviceController.getAlertsForDevice);
 router.get('/devices/:id/analysis', authenticateToken, deviceController.getAnalysis);
 
+// FCM Token APIs (requires auth)
+router.post('/fcm-token', authenticateToken, userController.saveFcmToken);
+router.delete('/fcm-token', authenticateToken, userController.deleteFcmToken);
+
 module.exports = router;

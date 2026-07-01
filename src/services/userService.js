@@ -75,13 +75,28 @@ class UserService {
         }
 
         let levelId = null;
-        const levelStr = String(access_level).trim();
-        if (/^\d+$/.test(levelStr)) {
-            levelId = parseInt(levelStr, 10);
-        } else {
-            const dbLevel = await levelRepository.findByName(adminId, levelStr);
-            if (dbLevel) {
-                levelId = dbLevel.id;
+        if (access_level !== undefined && access_level !== null && access_level !== '') {
+            const levelStr = String(access_level).trim();
+            if (levelStr && levelStr !== 'null' && levelStr !== 'undefined') {
+                if (/^\d+$/.test(levelStr)) {
+                    levelId = parseInt(levelStr, 10);
+                } else {
+                    const dbLevel = await levelRepository.findByName(adminId, levelStr);
+                    if (dbLevel) {
+                        levelId = dbLevel.id;
+                    }
+                }
+            }
+        }
+
+        let parsedLocationId = null;
+        if (location_id !== undefined && location_id !== null && location_id !== '') {
+            const locStr = String(location_id).trim();
+            if (locStr && locStr !== 'null' && locStr !== 'undefined') {
+                const parsed = parseInt(locStr, 10);
+                if (!isNaN(parsed)) {
+                    parsedLocationId = parsed;
+                }
             }
         }
 
@@ -90,7 +105,7 @@ class UserService {
             phone_number: normalizedPhone,
             role_id: roleId,
             level_id: levelId,
-            location_id: parseInt(location_id, 10),
+            location_id: parsedLocationId,
             created_at: new Date(),
             admin_id: adminId,
             is_blocked: isBlocked
@@ -313,18 +328,32 @@ class UserService {
         }
 
         let levelId = null;
-        const levelStr = String(access_level).trim();
-        if (/^\d+$/.test(levelStr)) {
-            levelId = parseInt(levelStr, 10);
-        } else {
-            const dbLevel = await levelRepository.findByName(staffOwnerAdminId, levelStr);
-            if (dbLevel) {
-                levelId = dbLevel.id;
+        if (access_level !== undefined && access_level !== null && access_level !== '') {
+            const levelStr = String(access_level).trim();
+            if (levelStr && levelStr !== 'null' && levelStr !== 'undefined') {
+                if (/^\d+$/.test(levelStr)) {
+                    levelId = parseInt(levelStr, 10);
+                } else {
+                    const dbLevel = await levelRepository.findByName(staffOwnerAdminId, levelStr);
+                    if (dbLevel) {
+                        levelId = dbLevel.id;
+                    }
+                }
+            }
+        }
+
+        let parsedLocationId = null;
+        if (location_id !== undefined && location_id !== null && location_id !== '') {
+            const locStr = String(location_id).trim();
+            if (locStr && locStr !== 'null' && locStr !== 'undefined') {
+                const parsed = parseInt(locStr, 10);
+                if (!isNaN(parsed)) {
+                    parsedLocationId = parsed;
+                }
             }
         }
 
         // Update record
-        const parsedLocationId = parseInt(location_id, 10);
         await userRepository.updateStaff(staffId, name, normalizedPhone, roleId, levelId, parsedLocationId);
 
         // Fetch updated user with location details
@@ -374,6 +403,24 @@ class UserService {
         }
 
         await userRepository.deleteStaff(staffId);
+    }
+
+    // 13. Save FCM Token
+    async saveFcmToken(userId, fcmToken, deviceType) {
+        if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.trim() === '') {
+            throw new ServiceError('FCM token is required', 400);
+        }
+        const fcmRepository = require('../repositories/fcmRepository');
+        await fcmRepository.saveToken(userId, fcmToken, deviceType);
+    }
+
+    // 14. Delete FCM Token
+    async deleteFcmToken(userId, fcmToken) {
+        if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.trim() === '') {
+            throw new ServiceError('FCM token is required', 400);
+        }
+        const fcmRepository = require('../repositories/fcmRepository');
+        await fcmRepository.deleteToken(userId, fcmToken);
     }
 }
 
