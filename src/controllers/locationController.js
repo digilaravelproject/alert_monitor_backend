@@ -10,7 +10,7 @@ class LocationController {
                 });
             }
 
-            const { name, address, city, zip_code } = req.body;
+            const { name, address, city, zip_code, latitude, longitude } = req.body;
             if (!name || typeof name !== 'string' || name.trim() === '') {
                 return res.status(400).json({
                     status: false,
@@ -50,6 +50,8 @@ class LocationController {
                 address,
                 city,
                 zip_code,
+                latitude,
+                longitude,
                 admin_id: adminId
             });
 
@@ -175,7 +177,7 @@ class LocationController {
             }
 
             const { id } = req.params;
-            const { name, address, city, zip_code } = req.body;
+            const { name, address, city, zip_code, latitude, longitude } = req.body;
 
             if (!name || typeof name !== 'string' || name.trim() === '') {
                 return res.status(400).json({
@@ -221,7 +223,7 @@ class LocationController {
                 });
             }
 
-            const updated = await locationRepository.update(parseInt(id, 10), { name, address, city, zip_code });
+            const updated = await locationRepository.update(parseInt(id, 10), { name, address, city, zip_code, latitude, longitude });
 
             res.status(200).json({
                 status: true,

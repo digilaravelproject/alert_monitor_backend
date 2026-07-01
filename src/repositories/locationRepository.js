@@ -1,18 +1,20 @@
 const { sql, pool, poolConnect } = require('../config/database');
 
 class LocationRepository {
-    async create({ name, address, city, zip_code, admin_id }) {
+    async create({ name, address, city, zip_code, latitude, longitude, admin_id }) {
         await poolConnect;
         const result = await pool.request()
             .input('name', sql.NVarChar, name.trim())
             .input('address', sql.NVarChar, address ? address.trim() : null)
             .input('city', sql.NVarChar, city ? city.trim() : null)
             .input('zip_code', sql.NVarChar, zip_code ? zip_code.trim() : null)
+            .input('latitude', sql.NVarChar, latitude ? String(latitude).trim() : null)
+            .input('longitude', sql.NVarChar, longitude ? String(longitude).trim() : null)
             .input('admin_id', sql.Int, admin_id)
             .query(`
-                INSERT INTO locations (name, address, city, zip_code, admin_id, is_active)
-                OUTPUT INSERTED.id, INSERTED.name, INSERTED.address, INSERTED.city, INSERTED.zip_code, INSERTED.is_active, INSERTED.admin_id, INSERTED.created_at
-                VALUES (@name, @address, @city, @zip_code, @admin_id, 1)
+                INSERT INTO locations (name, address, city, zip_code, latitude, longitude, admin_id, is_active)
+                OUTPUT INSERTED.id, INSERTED.name, INSERTED.address, INSERTED.city, INSERTED.zip_code, INSERTED.latitude, INSERTED.longitude, INSERTED.is_active, INSERTED.admin_id, INSERTED.created_at
+                VALUES (@name, @address, @city, @zip_code, @latitude, @longitude, @admin_id, 1)
             `);
         return result.recordset[0];
     }
@@ -20,7 +22,7 @@ class LocationRepository {
     async getAll(adminId = null, isSuperAdmin = false) {
         await poolConnect;
         let query = `
-            SELECT l.id, l.name, l.address, l.city, l.zip_code, l.is_active, l.admin_id, l.created_at,
+            SELECT l.id, l.name, l.address, l.city, l.zip_code, l.latitude, l.longitude, l.is_active, l.admin_id, l.created_at,
                    (SELECT COUNT(*) FROM users u WHERE u.location_id = l.id) as nodes,
                    (SELECT COUNT(*) FROM users u WHERE u.location_id = l.id AND u.is_blocked = 0) as online_nodes,
                    u.name AS owner_name, u.email AS owner_email
@@ -40,7 +42,7 @@ class LocationRepository {
     async getById(id, adminId = null, isSuperAdmin = false) {
         await poolConnect;
         let query = `
-            SELECT l.id, l.name, l.address, l.city, l.zip_code, l.is_active, l.admin_id, l.created_at,
+            SELECT l.id, l.name, l.address, l.city, l.zip_code, l.latitude, l.longitude, l.is_active, l.admin_id, l.created_at,
                    (SELECT COUNT(*) FROM users u WHERE u.location_id = l.id) as nodes,
                    (SELECT COUNT(*) FROM users u WHERE u.location_id = l.id AND u.is_blocked = 0) as online_nodes
             FROM locations l
@@ -75,7 +77,7 @@ class LocationRepository {
     async search(adminId = null, queryStr, isSuperAdmin = false) {
         await poolConnect;
         let query = `
-            SELECT l.id, l.name, l.address, l.city, l.zip_code, l.is_active, l.admin_id, l.created_at,
+            SELECT l.id, l.name, l.address, l.city, l.zip_code, l.latitude, l.longitude, l.is_active, l.admin_id, l.created_at,
                    (SELECT COUNT(*) FROM users u WHERE u.location_id = l.id) as nodes,
                    (SELECT COUNT(*) FROM users u WHERE u.location_id = l.id AND u.is_blocked = 0) as online_nodes,
                    u.name AS owner_name, u.email AS owner_email
@@ -93,7 +95,7 @@ class LocationRepository {
         return result.recordset;
     }
 
-    async update(id, { name, address, city, zip_code }) {
+    async update(id, { name, address, city, zip_code, latitude, longitude }) {
         await poolConnect;
         const result = await pool.request()
             .input('id', sql.Int, id)
@@ -101,10 +103,12 @@ class LocationRepository {
             .input('address', sql.NVarChar, address ? address.trim() : null)
             .input('city', sql.NVarChar, city ? city.trim() : null)
             .input('zip_code', sql.NVarChar, zip_code ? zip_code.trim() : null)
+            .input('latitude', sql.NVarChar, latitude ? String(latitude).trim() : null)
+            .input('longitude', sql.NVarChar, longitude ? String(longitude).trim() : null)
             .query(`
                 UPDATE locations
-                SET name = @name, address = @address, city = @city, zip_code = @zip_code
-                OUTPUT INSERTED.id, INSERTED.name, INSERTED.address, INSERTED.city, INSERTED.zip_code, INSERTED.is_active, INSERTED.admin_id, INSERTED.created_at
+                SET name = @name, address = @address, city = @city, zip_code = @zip_code, latitude = @latitude, longitude = @longitude
+                OUTPUT INSERTED.id, INSERTED.name, INSERTED.address, INSERTED.city, INSERTED.zip_code, INSERTED.latitude, INSERTED.longitude, INSERTED.is_active, INSERTED.admin_id, INSERTED.created_at
                 WHERE id = @id
             `);
         return result.recordset[0];
@@ -118,7 +122,7 @@ class LocationRepository {
             .query(`
                 UPDATE locations
                 SET is_active = @is_active
-                OUTPUT INSERTED.id, INSERTED.name, INSERTED.address, INSERTED.city, INSERTED.zip_code, INSERTED.is_active, INSERTED.admin_id, INSERTED.created_at
+                OUTPUT INSERTED.id, INSERTED.name, INSERTED.address, INSERTED.city, INSERTED.zip_code, INSERTED.latitude, INSERTED.longitude, INSERTED.is_active, INSERTED.admin_id, INSERTED.created_at
                 WHERE id = @id
             `);
         return result.recordset[0];

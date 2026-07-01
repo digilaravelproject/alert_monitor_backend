@@ -167,11 +167,29 @@ async function updateSchema() {
                     address NVARCHAR(255) NULL,
                     city NVARCHAR(100) NULL,
                     zip_code NVARCHAR(20) NULL,
+                    latitude NVARCHAR(100) NULL,
+                    longitude NVARCHAR(100) NULL,
                     is_active BIT NOT NULL DEFAULT 1,
                     admin_id INT NULL,
                     created_at DATETIME DEFAULT GETDATE()
                 );
                 PRINT 'Table locations created.';
+            END
+            ELSE
+            BEGIN
+                -- Check and add latitude column to locations table
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[locations]') AND name = 'latitude')
+                BEGIN
+                    ALTER TABLE [dbo].[locations] ADD latitude NVARCHAR(100) NULL;
+                    PRINT 'Added latitude column to locations.';
+                END
+
+                -- Check and add longitude column to locations table
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[locations]') AND name = 'longitude')
+                BEGIN
+                    ALTER TABLE [dbo].[locations] ADD longitude NVARCHAR(100) NULL;
+                    PRINT 'Added longitude column to locations.';
+                END
             END
 
             -- Check and add location_id column to users table
