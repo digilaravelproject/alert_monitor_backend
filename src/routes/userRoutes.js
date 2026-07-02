@@ -74,6 +74,7 @@ router.delete('/locations/:id', authenticateToken, locationController.delete);
 router.post('/devices', authenticateToken, validateCreateDevice, deviceController.create);
 router.get('/devices/types', authenticateToken, deviceController.getTypes);
 router.get('/alerts', authenticateToken, deviceController.getAlertsData);
+router.get('/alerts/all', authenticateToken, deviceController.getAllAlertsForAdmin);
 router.get('/devices/search', authenticateToken, deviceController.search);
 router.post('/devices/:id/toggle', authenticateToken, deviceController.toggleStatus);
 router.get('/devices/:id', authenticateToken, deviceController.getById);

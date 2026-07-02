@@ -678,6 +678,57 @@ class DeviceRepository {
             }
         });
     }
+
+    async getAllAlertsForAdmin(adminId = null, isSuperAdmin = false) {
+        await poolConnect;
+        let query = `
+            SELECT f.Id AS alert_id, f.ev AS alert_event, f.msg AS alert_message, f.Insertdate AS alert_date, 
+                   f.bat_pct AS battery_percentage, f.ts, f.node,
+                   d.id AS device_id, d.name AS device_name, d.serial_number AS device_serial_number, d.type AS device_type, d.is_active AS device_is_active,
+                   l.id AS location_id, l.name AS location_name,
+                   CASE 
+                       WHEN dis.feed_id IS NOT NULL THEN 'DISMISSED'
+                       WHEN ack.feed_id IS NOT NULL THEN 'ACKNOWLEDGED'
+                       ELSE 'ACTIVE'
+                   END AS alert_status,
+                   ack.acknowledged_by, ack.acknowledged_at, dis.dismissed_at
+            FROM tbl_DeviceFeedData f
+            INNER JOIN devices d ON (f.node = d.serial_number OR CAST(f.ts AS NVARCHAR(100)) = d.serial_number)
+            INNER JOIN locations l ON d.location_id = l.id
+            LEFT JOIN acknowledged_alerts ack ON f.Id = ack.feed_id
+            LEFT JOIN dismissed_alerts dis ON f.Id = dis.feed_id
+            WHERE f.ev <> 'hb'
+        `;
+        const request = pool.request();
+        if (!isSuperAdmin && adminId !== null) {
+            query += ' AND l.admin_id = @adminId';
+            request.input('adminId', sql.Int, adminId);
+        }
+        query += ' ORDER BY f.Id DESC';
+        const result = await request.query(query);
+        return result.recordset.map(row => ({
+            id: row.alert_id,
+            ev: row.alert_event,
+            msg: row.alert_message,
+            insert_date: row.alert_date,
+            battery_percentage: row.battery_percentage !== null ? Number(row.battery_percentage) : 100,
+            status: row.alert_status,
+            acknowledged_by: row.acknowledged_by || null,
+            acknowledged_at: row.acknowledged_at || null,
+            dismissed_at: row.dismissed_at || null,
+            device: {
+                id: row.device_id,
+                name: row.device_name,
+                serial_number: row.device_serial_number,
+                type: row.device_type,
+                is_active: row.device_is_active,
+                location: {
+                    id: row.location_id,
+                    name: row.location_name
+                }
+            }
+        }));
+    }
 }
 
 module.exports = new DeviceRepository();

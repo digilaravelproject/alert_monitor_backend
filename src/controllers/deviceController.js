@@ -492,6 +492,32 @@ class DeviceController {
             });
         }
     }
+
+    async getAllAlertsForAdmin(req, res) {
+        try {
+            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+                return res.status(403).json({
+                    status: false,
+                    error: 'Forbidden: Access denied'
+                });
+            }
+
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const adminId = isSuperAdmin ? null : req.user.id;
+
+            const alerts = await deviceRepository.getAllAlertsForAdmin(adminId, isSuperAdmin);
+
+            res.status(200).json({
+                status: true,
+                data: alerts
+            });
+        } catch (error) {
+            res.status(500).json({
+                status: false,
+                error: error.message
+            });
+        }
+    }
 }
 
 module.exports = new DeviceController();
