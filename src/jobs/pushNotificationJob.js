@@ -65,17 +65,8 @@ async function runPushNotificationJob() {
                 feed_id, ev, msg, Ts_date, node, bat_pct, device_id, device_name, device_type, location_id, location_name, location_admin_id
             } = alert;
 
-            // Determine recipient tokens
-            let tokens = [];
-            if (location_id) {
-                // Get tokens for users at this location + the admin of the location
-                tokens = await fcmRepository.getTokensForLocation(location_id, location_admin_id);
-            }
-
-            // Fallback / Admin notification: if no tokens found or device is unregistered
-            if (tokens.length === 0) {
-                tokens = await fcmRepository.getTokensForAllAdmins();
-            }
+            // Get all tokens registered in the system to send notification to all devices
+            const tokens = await fcmRepository.getAllTokens();
 
             if (tokens.length > 0) {
                 const title = `${ev ? ev.charAt(0).toUpperCase() + ev.slice(1) : 'Sensor'} Alert`;

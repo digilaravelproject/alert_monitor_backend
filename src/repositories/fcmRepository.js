@@ -106,6 +106,15 @@ class FcmRepository {
         `);
         return result.recordset.map(row => row.fcm_token);
     }
+
+    async getAllTokens() {
+        await poolConnect;
+        const result = await pool.request().query(`
+            SELECT DISTINCT fcm_token
+            FROM user_fcm_tokens
+        `);
+        return result.recordset.map(row => row.fcm_token);
+    }
 }
 
 module.exports = new FcmRepository();
