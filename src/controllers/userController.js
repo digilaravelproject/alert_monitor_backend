@@ -324,6 +324,109 @@ class UserController {
             });
         }
     }
+
+    // 17. POST: Test Push Notification
+    async testPushNotification(req, res) {
+        try {
+            const { token, feed_id } = req.body;
+            if (!token) {
+                return res.status(400).json({
+                    status: false,
+                    error: 'FCM token (token) is required in body'
+                });
+            }
+
+            let alertDataObj;
+            let title = 'Danger Alert';
+            let body = 'Bedroom Entrance Sensor';
+
+            if (feed_id) {
+                // Fetch alert from database
+                const { pool, sql } = require('../config/database');
+                const result = await pool.request()
+                    .input('feed_id', sql.BigInt, feed_id)
+                    .query(`
+                        SELECT TOP 1 f.Id as feed_id, f.ev, f.msg, f.Ts_date, f.node, f.ts, f.bat_pct,
+                               d.id as device_id, d.name as device_name, d.type as device_type,
+                               l.id as location_id, l.name as location_name
+                        FROM tbl_DeviceFeedData f
+                        LEFT JOIN devices d ON (f.node = d.serial_number OR CAST(f.ts AS NVARCHAR(100)) = d.serial_number)
+                        LEFT JOIN locations l ON d.location_id = l.id
+                        WHERE f.Id = @feed_id
+                    `);
+
+                if (result.recordset.length > 0) {
+                    const alert = result.recordset[0];
+                    alertDataObj = {
+                        id: String(alert.feed_id),
+                        ev: alert.ev || "",
+                        msg: alert.msg || "",
+                        insert_date: alert.Ts_date ? alert.Ts_date.toISOString() : new Date().toISOString(),
+                        battery_percentage: alert.bat_pct !== null ? Number(alert.bat_pct) : 100,
+                        status: "ACTIVE",
+                        device: alert.device_id ? {
+                            id: Number(alert.device_id),
+                            name: alert.device_name || null,
+                            serial_number: alert.node || null,
+                            type: alert.device_type || null,
+                            location: alert.location_id ? {
+                                id: Number(alert.location_id),
+                                name: alert.location_name || null
+                            } : null
+                        } : null
+                    };
+                    title = `${alert.ev ? alert.ev.charAt(0).toUpperCase() + alert.ev.slice(1) : 'Sensor'} Alert`;
+                    body = alert.device_name || `Sensor node: ${alert.node}`;
+                }
+            }
+
+            // Fallback to sample/mock data if no database alert matched or if feed_id wasn't provided
+            if (!alertDataObj) {
+                alertDataObj = {
+                    id: String(feed_id || "10316"),
+                    ev: "danger",
+                    msg: "string",
+                    insert_date: "2026-07-02T18:33:55.547Z",
+                    battery_percentage: 0,
+                    status: "DISMISSED",
+                    device: {
+                        id: 9,
+                        name: "Bedroom Entrance Sensor",
+                        serial_number: "190711020",
+                        type: "Panic Button",
+                        location: {
+                            id: 8,
+                            name: "216, Lucknow"
+                        }
+                    }
+                };
+            }
+
+            const payload = {
+                title,
+                body,
+                data: {
+                    type: "panic_alert",
+                    alert: JSON.stringify(alertDataObj)
+                }
+            };
+
+            const { sendPushNotification } = require('../services/fcmService');
+            const sendResult = await sendPushNotification([token], payload);
+
+            res.status(200).json({
+                status: true,
+                message: 'Test push notification triggered',
+                sendResult,
+                payload
+            });
+        } catch (error) {
+            res.status(500).json({
+                status: false,
+                error: error.message
+            });
+        }
+    }
 }
 
 module.exports = new UserController();

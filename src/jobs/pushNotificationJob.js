@@ -33,7 +33,7 @@ async function runPushNotificationJob() {
         const newAlertsResult = await pool.request()
             .input('last_id', sql.BigInt, lastId)
             .query(`
-                SELECT f.Id as feed_id, f.ev, f.msg, f.Ts_date, f.node, f.ts,
+                SELECT f.Id as feed_id, f.ev, f.msg, f.Ts_date, f.node, f.ts, f.bat_pct,
                        d.id as device_id, d.name as device_name, d.type as device_type,
                        l.id as location_id, l.name as location_name, l.admin_id as location_admin_id
                 FROM tbl_DeviceFeedData f
@@ -62,7 +62,7 @@ async function runPushNotificationJob() {
 
         for (const alert of alerts) {
             const {
-                feed_id, ev, msg, Ts_date, node, device_id, device_name, location_id, location_name, location_admin_id
+                feed_id, ev, msg, Ts_date, node, bat_pct, device_id, device_name, device_type, location_id, location_name, location_admin_id
             } = alert;
 
             // Determine recipient tokens
@@ -78,21 +78,34 @@ async function runPushNotificationJob() {
             }
 
             if (tokens.length > 0) {
-                const title = `VigiSense Alert: ${ev || 'Sensor Event'}`;
-                const body = device_name
-                    ? `Device "${device_name}" at "${location_name}" triggered alert: ${msg || 'No details'}`
-                    : `Unregistered device (node: ${node}) triggered alert: ${msg || 'No details'}`;
+                const title = `${ev ? ev.charAt(0).toUpperCase() + ev.slice(1) : 'Sensor'} Alert`;
+                const body = device_name || `Sensor node: ${node}`;
+
+                const alertDataObj = {
+                    id: String(feed_id),
+                    ev: ev || "",
+                    msg: msg || "",
+                    insert_date: Ts_date ? Ts_date.toISOString() : new Date().toISOString(),
+                    battery_percentage: bat_pct !== null ? Number(bat_pct) : 100,
+                    status: "ACTIVE",
+                    device: device_id ? {
+                        id: Number(device_id),
+                        name: device_name || null,
+                        serial_number: node || null,
+                        type: device_type || null,
+                        location: location_id ? {
+                            id: Number(location_id),
+                            name: location_name || null
+                        } : null
+                    } : null
+                };
 
                 const payload = {
                     title,
                     body,
                     data: {
-                        feedId: String(feed_id),
-                        event: String(ev || ''),
-                        deviceId: String(device_id || ''),
-                        deviceSerial: String(node || ''),
-                        locationId: String(location_id || ''),
-                        timestamp: String(Ts_date ? Ts_date.toISOString() : new Date().toISOString())
+                        type: "panic_alert",
+                        alert: JSON.stringify(alertDataObj)
                     }
                 };
 

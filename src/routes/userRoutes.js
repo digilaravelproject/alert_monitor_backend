@@ -6,6 +6,7 @@ const roleController = require('../controllers/roleController');
 const levelController = require('../controllers/levelController');
 const locationController = require('../controllers/locationController');
 const deviceController = require('../controllers/deviceController');
+const homepageController = require('../controllers/homepageController');
 const { authenticateToken } = require('../middlewares/authMiddleware');
 const { validateAddOrUpdateUser, validateVerifyOtp } = require('../validations/userValidation');
 const { validateCreateDevice, validateUpdateDevice } = require('../validations/deviceValidation');
@@ -26,6 +27,7 @@ router.post('/verify-otp', validateVerifyOtp, userController.verifyOtp);
 router.post('/super-admin/login', userController.superAdminLogin);
 
 // Dashboard / Listing APIs (requires auth)
+router.get('/homepage', authenticateToken, homepageController.getHomepage);
 router.get('/users', authenticateToken, userController.getUsers);
 router.get('/staff', authenticateToken, userController.getStaff);
 
@@ -90,5 +92,6 @@ router.get('/devices/:id/analysis', authenticateToken, deviceController.getAnaly
 // FCM Token APIs (requires auth)
 router.post('/fcm-token', authenticateToken, userController.saveFcmToken);
 router.delete('/fcm-token', authenticateToken, userController.deleteFcmToken);
+router.post('/test-push-notification', authenticateToken, userController.testPushNotification);
 
 module.exports = router;
