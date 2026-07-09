@@ -265,7 +265,8 @@ body {
 .dashboard-wrapper {
     display: grid;
     grid-template-columns: 260px 1fr;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
 }
 
 /* SIDEBAR NAVIGATION */
@@ -278,8 +279,20 @@ body {
     position: sticky;
     top: 0;
     height: 100vh;
+    overflow-y: auto;
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 5px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .sidebar-header {
@@ -393,6 +406,7 @@ body {
 /* MAIN CONTENT CONTAINER */
 .main-content {
     padding: 40px;
+    height: 100vh;
     overflow-y: auto;
     max-width: 1400px;
     margin: 0 auto;

@@ -90,6 +90,21 @@ class NotificationRepository {
         return result.recordset;
     }
 
+    async getUserNotificationById(userId, id) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('userId', sql.Int, userId)
+            .input('id', sql.Int, id)
+            .query(`
+                SELECT n.id, n.title, n.message, n.is_active, n.created_at, n.updated_at,
+                       COALESCE(uns.is_read, 0) as is_read
+                FROM system_notifications n
+                LEFT JOIN user_notification_status uns ON (n.id = uns.notification_id AND uns.user_id = @userId)
+                WHERE n.id = @id AND n.is_active = 1
+            `);
+        return result.recordset[0];
+    }
+
     async markAsRead(userId, notificationId) {
         await poolConnect;
         await pool.request()

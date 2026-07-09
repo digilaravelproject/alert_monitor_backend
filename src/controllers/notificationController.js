@@ -88,15 +88,15 @@ class NotificationController {
 
     async getById(req, res) {
         try {
-            if (req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Super Admin privileges required'
-                });
+            const { id } = req.params;
+            let notification;
+
+            if (req.user.role === 'Super Admin') {
+                notification = await notificationRepository.getById(parseInt(id, 10));
+            } else {
+                notification = await notificationRepository.getUserNotificationById(req.user.id, parseInt(id, 10));
             }
 
-            const { id } = req.params;
-            const notification = await notificationRepository.getById(parseInt(id, 10));
             if (!notification) {
                 return res.status(404).json({
                     status: false,

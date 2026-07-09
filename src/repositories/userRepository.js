@@ -333,7 +333,7 @@ class UserRepository {
             const result = await pool.request()
                 .input('id', sql.Int, userId)
                 .query(`
-                    SELECT u.id, u.name, u.email, u.phone_number, u.profile_image, COALESCE(r.name, u.role) as role, u.role_id,
+                    SELECT u.id, u.name, u.email, u.phone_number, u.profile_image, COALESCE(r.name, u.role) as role, u.role_id, u.location_id,
                            loc.name as loc_name, loc.address as loc_address, loc.city as loc_city, loc.zip_code as loc_zip_code
                     FROM users u
                     LEFT JOIN roles r ON u.role_id = r.id

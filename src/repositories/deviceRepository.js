@@ -221,7 +221,7 @@ class DeviceRepository {
         });
     }
 
-    async getAlertsData(adminId = null, isSuperAdmin = false, deviceType = null) {
+    async getAlertsData(adminId = null, isSuperAdmin = false, deviceType = null, locationId = null) {
         await poolConnect;
         let query = `
             SELECT d.id, d.name, d.serial_number, d.type, d.is_active, d.created_at,
@@ -248,16 +248,23 @@ class DeviceRepository {
                 WHERE (a.node = d.serial_number OR CAST(a.ts AS NVARCHAR(100)) = d.serial_number)
                   AND a.ev <> 'hb'
                   AND a.Id NOT IN (SELECT feed_id FROM dismissed_alerts)
-                ORDER BY a.Id DESC
+                  ORDER BY a.Id DESC
             ) active_alert
         `;
         
         const request = pool.request();
         let whereClauses = [];
 
-        if (!isSuperAdmin && adminId !== null) {
+        if (isSuperAdmin) {
+            // No filters
+        } else if (adminId !== null) {
             whereClauses.push('l.admin_id = @adminId');
             request.input('adminId', sql.Int, adminId);
+        } else if (locationId !== null) {
+            whereClauses.push('l.id = @locationId');
+            request.input('locationId', sql.Int, locationId);
+        } else {
+            whereClauses.push('1=0');
         }
 
         if (deviceType && deviceType.toLowerCase() !== 'all') {
@@ -544,7 +551,7 @@ class DeviceRepository {
         };
     }
 
-    async getAlertsForDevice(deviceId, adminId = null, isSuperAdmin = false) {
+    async getAlertsForDevice(deviceId, adminId = null, isSuperAdmin = false, locationId = null) {
         await poolConnect;
 
         // 1. Fetch device info
@@ -555,9 +562,16 @@ class DeviceRepository {
             INNER JOIN locations l ON d.location_id = l.id
             WHERE d.id = @deviceId
         `;
-        if (!isSuperAdmin && adminId !== null) {
+        if (isSuperAdmin) {
+            // No filter
+        } else if (adminId !== null) {
             deviceQuery += ' AND l.admin_id = @adminId';
             request.input('adminId', sql.Int, adminId);
+        } else if (locationId !== null) {
+            deviceQuery += ' AND l.id = @locationId';
+            request.input('locationId', sql.Int, locationId);
+        } else {
+            deviceQuery += ' AND 1=0';
         }
         const deviceRes = await request.query(deviceQuery);
         const device = deviceRes.recordset[0];
@@ -679,7 +693,7 @@ class DeviceRepository {
         });
     }
 
-    async getAllAlertsForAdmin(adminId = null, isSuperAdmin = false) {
+    async getAllAlertsForAdmin(adminId = null, isSuperAdmin = false, locationId = null) {
         await poolConnect;
         let query = `
             SELECT f.Id AS alert_id, f.ev AS alert_event, f.msg AS alert_message, f.Insertdate AS alert_date, 
@@ -687,9 +701,9 @@ class DeviceRepository {
                    d.id AS device_id, d.name AS device_name, d.serial_number AS device_serial_number, d.type AS device_type, d.is_active AS device_is_active,
                    l.id AS location_id, l.name AS location_name,
                    CASE 
-                       WHEN dis.feed_id IS NOT NULL THEN 'DISMISSED'
-                       WHEN ack.feed_id IS NOT NULL THEN 'ACKNOWLEDGED'
-                       ELSE 'ACTIVE'
+                        WHEN dis.feed_id IS NOT NULL THEN 'DISMISSED'
+                        WHEN ack.feed_id IS NOT NULL THEN 'ACKNOWLEDGED'
+                        ELSE 'ACTIVE'
                    END AS alert_status,
                    ack.acknowledged_by, ack.acknowledged_at, dis.dismissed_at
             FROM tbl_DeviceFeedData f
@@ -700,9 +714,16 @@ class DeviceRepository {
             WHERE f.ev <> 'hb'
         `;
         const request = pool.request();
-        if (!isSuperAdmin && adminId !== null) {
+        if (isSuperAdmin) {
+            // No filter
+        } else if (adminId !== null) {
             query += ' AND l.admin_id = @adminId';
             request.input('adminId', sql.Int, adminId);
+        } else if (locationId !== null) {
+            query += ' AND l.id = @locationId';
+            request.input('locationId', sql.Int, locationId);
+        } else {
+            query += ' AND 1=0';
         }
         query += ' ORDER BY f.Id DESC';
         const result = await request.query(query);

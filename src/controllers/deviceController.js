@@ -80,18 +80,25 @@ class DeviceController {
 
     async getAlertsData(req, res) {
         try {
-            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-            //     return res.status(403).json({
-            //         status: false,
-            //         error: 'Forbidden: Access denied'
-            //     });
-            // }
-
             const { type } = req.query;
             const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const isAdmin = req.user.role === 'Admin';
+            let adminId = null;
+            let locationId = null;
 
-            const result = await deviceRepository.getAlertsData(adminId, isSuperAdmin, type);
+            if (isSuperAdmin) {
+                // No filters
+            } else if (isAdmin) {
+                adminId = req.user.id;
+            } else {
+                const userRepository = require('../repositories/userRepository');
+                const userProfile = await userRepository.getProfile(req.user.id, req.user.role);
+                if (userProfile && userProfile.location_id) {
+                    locationId = userProfile.location_id;
+                }
+            }
+
+            const result = await deviceRepository.getAlertsData(adminId, isSuperAdmin, type, locationId);
             
             res.status(200).json({
                 status: true,
@@ -462,18 +469,25 @@ class DeviceController {
 
     async getAlertsForDevice(req, res) {
         try {
-            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-            //     return res.status(403).json({
-            //         status: false,
-            //         error: 'Forbidden: Access denied'
-            //     });
-            // }
-
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const isAdmin = req.user.role === 'Admin';
+            let adminId = null;
+            let locationId = null;
 
-            const alertsData = await deviceRepository.getAlertsForDevice(parseInt(id, 10), adminId, isSuperAdmin);
+            if (isSuperAdmin) {
+                // No filters
+            } else if (isAdmin) {
+                adminId = req.user.id;
+            } else {
+                const userRepository = require('../repositories/userRepository');
+                const userProfile = await userRepository.getProfile(req.user.id, req.user.role);
+                if (userProfile && userProfile.location_id) {
+                    locationId = userProfile.location_id;
+                }
+            }
+
+            const alertsData = await deviceRepository.getAlertsForDevice(parseInt(id, 10), adminId, isSuperAdmin, locationId);
             if (!alertsData) {
                 return res.status(404).json({
                     status: false,
@@ -495,17 +509,24 @@ class DeviceController {
 
     async getAllAlertsForAdmin(req, res) {
         try {
-            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-            //     return res.status(403).json({
-            //         status: false,
-            //         error: 'Forbidden: Access denied'
-            //     });
-            // }
-
             const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const isAdmin = req.user.role === 'Admin';
+            let adminId = null;
+            let locationId = null;
 
-            const alerts = await deviceRepository.getAllAlertsForAdmin(adminId, isSuperAdmin);
+            if (isSuperAdmin) {
+                // No filters for super admins
+            } else if (isAdmin) {
+                adminId = req.user.id;
+            } else {
+                const userRepository = require('../repositories/userRepository');
+                const userProfile = await userRepository.getProfile(req.user.id, req.user.role);
+                if (userProfile && userProfile.location_id) {
+                    locationId = userProfile.location_id;
+                }
+            }
+
+            const alerts = await deviceRepository.getAllAlertsForAdmin(adminId, isSuperAdmin, locationId);
 
             res.status(200).json({
                 status: true,
