@@ -80,12 +80,12 @@ class DeviceController {
 
     async getAlertsData(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { type } = req.query;
             const isSuperAdmin = req.user.role === 'Super Admin';
@@ -108,12 +108,12 @@ class DeviceController {
 
     async search(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { query } = req.query;
             if (!query || typeof query !== 'string' || query.trim() === '') {
@@ -142,12 +142,12 @@ class DeviceController {
 
     async toggleStatus(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
@@ -179,12 +179,12 @@ class DeviceController {
 
     async getById(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
@@ -212,12 +212,12 @@ class DeviceController {
 
     async update(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const { name, serial_number, type, location_id } = req.body;
@@ -269,12 +269,12 @@ class DeviceController {
 
     async removeAlert(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
@@ -305,12 +305,12 @@ class DeviceController {
 
     async removeAlertByFeedId(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { feedId } = req.params;
 
@@ -330,12 +330,12 @@ class DeviceController {
 
     async delete(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
@@ -366,12 +366,12 @@ class DeviceController {
 
     async acknowledgeAlert(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
@@ -403,12 +403,12 @@ class DeviceController {
 
     async acknowledgeAlertByFeedId(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { feedId } = req.params;
             const username = req.user.name || req.user.email || 'Operator';
@@ -429,12 +429,12 @@ class DeviceController {
 
     async getAnalysis(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
@@ -462,12 +462,12 @@ class DeviceController {
 
     async getAlertsForDevice(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
@@ -495,12 +495,12 @@ class DeviceController {
 
     async getAllAlertsForAdmin(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const isSuperAdmin = req.user.role === 'Super Admin';
             const adminId = isSuperAdmin ? null : req.user.id;

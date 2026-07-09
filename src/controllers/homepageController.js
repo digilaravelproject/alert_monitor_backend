@@ -3,12 +3,12 @@ const homepageRepository = require('../repositories/homepageRepository');
 class HomepageController {
     async getHomepage(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Admin access required'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Admin access required'
+            //     });
+            // }
 
             const isSuperAdmin = req.user.role === 'Super Admin';
             const adminId = isSuperAdmin ? null : req.user.id;

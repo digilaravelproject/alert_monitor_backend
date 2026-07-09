@@ -37,6 +37,12 @@ class UserController {
     // 3. POST: Add User (Staff Enrollment)
     async addStaff(req, res) {
         try {
+            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+                return res.status(403).json({
+                    status: false,
+                    error: 'Forbidden: Admin access required'
+                });
+            }
             const { name, phone_number, role, access_level, location_id } = req.body;
             const newUser = await UserService.addStaff(name, phone_number, role, access_level, location_id, req.user);
             res.status(201).json({
