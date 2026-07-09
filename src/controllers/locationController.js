@@ -36,7 +36,7 @@ class LocationController {
                 });
             }
 
-            const adminId = req.user.role === 'Super Admin' ? null : req.user.id;
+            const adminId = req.user.id;
             const existing = await locationRepository.findByName(adminId, name);
             if (existing) {
                 return res.status(400).json({
@@ -76,9 +76,8 @@ class LocationController {
                 });
             }
 
-            const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
-            const locations = await locationRepository.getAll(adminId, isSuperAdmin);
+            const adminId = req.user.id;
+            const locations = await locationRepository.getAll(adminId);
 
             const totalLocations = locations.length;
             const totalNodes = locations.reduce((sum, loc) => sum + (loc.nodes || 0), 0);
@@ -111,9 +110,8 @@ class LocationController {
             }
 
             const { id } = req.params;
-            const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
-            const location = await locationRepository.getById(parseInt(id, 10), adminId, isSuperAdmin);
+            const adminId = req.user.id;
+            const location = await locationRepository.getById(parseInt(id, 10), adminId);
 
             if (!location) {
                 return res.status(404).json({
@@ -151,9 +149,8 @@ class LocationController {
                 });
             }
 
-            const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
-            const locations = await locationRepository.search(adminId, query, isSuperAdmin);
+            const adminId = req.user.id;
+            const locations = await locationRepository.search(adminId, query);
 
             res.status(200).json({
                 status: true,
@@ -204,10 +201,9 @@ class LocationController {
                 });
             }
 
-            const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const adminId = req.user.id;
 
-            const location = await locationRepository.getById(parseInt(id, 10), adminId, isSuperAdmin);
+            const location = await locationRepository.getById(parseInt(id, 10), adminId);
             if (!location) {
                 return res.status(404).json({
                     status: false,
@@ -248,10 +244,9 @@ class LocationController {
             }
 
             const { id } = req.params;
-            const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const adminId = req.user.id;
 
-            const location = await locationRepository.getById(parseInt(id, 10), adminId, isSuperAdmin);
+            const location = await locationRepository.getById(parseInt(id, 10), adminId);
             if (!location) {
                 return res.status(404).json({
                     status: false,
@@ -285,10 +280,9 @@ class LocationController {
             }
 
             const { id } = req.params;
-            const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const adminId = req.user.id;
 
-            const location = await locationRepository.getById(parseInt(id, 10), adminId, isSuperAdmin);
+            const location = await locationRepository.getById(parseInt(id, 10), adminId);
             if (!location) {
                 return res.status(404).json({
                     status: false,

@@ -3,10 +3,10 @@ const levelRepository = require('../repositories/levelRepository');
 class LevelController {
     async create(req, res) {
         try {
-            if (req.user.role !== 'Admin') {
+            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
                 return res.status(403).json({
                     status: false,
-                    error: 'Forbidden: Admin privileges required to create levels'
+                    error: 'Forbidden: Admin privileges required to manage levels'
                 });
             }
 
@@ -18,7 +18,8 @@ class LevelController {
                 });
             }
 
-            const existing = await levelRepository.findByName(req.user.id, name);
+            const adminId = req.user.id;
+            const existing = await levelRepository.findByName(adminId, name);
             if (existing) {
                 return res.status(400).json({
                     status: false,
@@ -29,11 +30,12 @@ class LevelController {
             const newLevel = await levelRepository.create({
                 name,
                 description,
+                slug: name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-'),
                 sla_window,
                 cycle_count,
                 response_logic,
                 color,
-                admin_id: req.user.id
+                admin_id: adminId
             });
 
             res.status(201).json({
@@ -50,18 +52,15 @@ class LevelController {
 
     async getAll(req, res) {
         try {
-            const isSuperAdmin = req.user.role === 'Super Admin';
-            const isAdmin = req.user.role === 'Admin';
-
-            if (!isSuperAdmin && !isAdmin) {
+            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
                 return res.status(403).json({
                     status: false,
                     error: 'Forbidden: Access denied'
                 });
             }
 
-            const adminId = isSuperAdmin ? null : req.user.id;
-            const levels = await levelRepository.getAll(adminId, isSuperAdmin);
+            const adminId = req.user.id;
+            const levels = await levelRepository.getAll(adminId);
 
             res.status(200).json({
                 status: true,
@@ -82,10 +81,7 @@ class LevelController {
 
     async search(req, res) {
         try {
-            const isSuperAdmin = req.user.role === 'Super Admin';
-            const isAdmin = req.user.role === 'Admin';
-
-            if (!isSuperAdmin && !isAdmin) {
+            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
                 return res.status(403).json({
                     status: false,
                     error: 'Forbidden: Access denied'
@@ -100,8 +96,8 @@ class LevelController {
                 });
             }
 
-            const adminId = isSuperAdmin ? null : req.user.id;
-            const levels = await levelRepository.search(adminId, query, isSuperAdmin);
+            const adminId = req.user.id;
+            const levels = await levelRepository.search(adminId, query);
 
             res.status(200).json({
                 status: true,
@@ -117,10 +113,7 @@ class LevelController {
 
     async getById(req, res) {
         try {
-            const isSuperAdmin = req.user.role === 'Super Admin';
-            const isAdmin = req.user.role === 'Admin';
-
-            if (!isSuperAdmin && !isAdmin) {
+            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
                 return res.status(403).json({
                     status: false,
                     error: 'Forbidden: Access denied'
@@ -128,13 +121,13 @@ class LevelController {
             }
 
             const { id } = req.params;
-            const adminId = isSuperAdmin ? null : req.user.id;
-            const level = await levelRepository.getById(id, adminId, isSuperAdmin);
+            const adminId = req.user.id;
+            const level = await levelRepository.getById(parseInt(id, 10), adminId);
 
             if (!level) {
                 return res.status(404).json({
                     status: false,
-                    error: 'Level not found'
+                    error: 'Level not found or access denied'
                 });
             }
 
@@ -152,10 +145,7 @@ class LevelController {
 
     async update(req, res) {
         try {
-            const isSuperAdmin = req.user.role === 'Super Admin';
-            const isAdmin = req.user.role === 'Admin';
-
-            if (!isSuperAdmin && !isAdmin) {
+            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
                 return res.status(403).json({
                     status: false,
                     error: 'Forbidden: Access denied'
@@ -172,25 +162,17 @@ class LevelController {
                 });
             }
 
-            const adminId = isSuperAdmin ? null : req.user.id;
-            const existing = await levelRepository.getById(id, adminId, isSuperAdmin);
+            const adminId = req.user.id;
 
-            if (!existing) {
+            const existingLevel = await levelRepository.getById(parseInt(id, 10), adminId);
+            if (!existingLevel) {
                 return res.status(404).json({
                     status: false,
                     error: 'Level not found or access denied'
                 });
             }
 
-            // Enforce that system roles (admin_id is null) can only be updated by Super Admin
-            if (existing.admin_id === null && !isSuperAdmin) {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Default system levels can only be updated by Super Admin'
-                });
-            }
-
-            const duplicate = await levelRepository.findByNameExcludingId(adminId, name, id);
+            const duplicate = await levelRepository.findByNameExcludingId(adminId, name, parseInt(id, 10));
             if (duplicate) {
                 return res.status(400).json({
                     status: false,
@@ -198,14 +180,7 @@ class LevelController {
                 });
             }
 
-            const updated = await levelRepository.update(id, {
-                name,
-                description,
-                sla_window,
-                cycle_count,
-                response_logic,
-                color
-            });
+            const updated = await levelRepository.update(parseInt(id, 10), { name, description, sla_window, cycle_count, response_logic, color });
 
             res.status(200).json({
                 status: true,
@@ -222,10 +197,7 @@ class LevelController {
 
     async delete(req, res) {
         try {
-            const isSuperAdmin = req.user.role === 'Super Admin';
-            const isAdmin = req.user.role === 'Admin';
-
-            if (!isSuperAdmin && !isAdmin) {
+            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
                 return res.status(403).json({
                     status: false,
                     error: 'Forbidden: Access denied'
@@ -233,25 +205,17 @@ class LevelController {
             }
 
             const { id } = req.params;
-            const adminId = isSuperAdmin ? null : req.user.id;
-            const existing = await levelRepository.getById(id, adminId, isSuperAdmin);
+            const adminId = req.user.id;
 
-            if (!existing) {
+            const existingLevel = await levelRepository.getById(parseInt(id, 10), adminId);
+            if (!existingLevel) {
                 return res.status(404).json({
                     status: false,
                     error: 'Level not found or access denied'
                 });
             }
 
-            // Enforce that system roles (admin_id is null) can only be deleted by Super Admin
-            if (existing.admin_id === null && !isSuperAdmin) {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Default system levels can only be deleted by Super Admin'
-                });
-            }
-
-            await levelRepository.delete(id);
+            await levelRepository.delete(parseInt(id, 10));
 
             res.status(200).json({
                 status: true,

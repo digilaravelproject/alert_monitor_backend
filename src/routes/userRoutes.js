@@ -7,6 +7,9 @@ const levelController = require('../controllers/levelController');
 const locationController = require('../controllers/locationController');
 const deviceController = require('../controllers/deviceController');
 const homepageController = require('../controllers/homepageController');
+const pageController = require('../controllers/pageController');
+const faqController = require('../controllers/faqController');
+const notificationController = require('../controllers/notificationController');
 const { authenticateToken } = require('../middlewares/authMiddleware');
 const { validateAddOrUpdateUser, validateVerifyOtp } = require('../validations/userValidation');
 const { validateCreateDevice, validateUpdateDevice } = require('../validations/deviceValidation');
@@ -93,5 +96,42 @@ router.get('/devices/:id/analysis', authenticateToken, deviceController.getAnaly
 router.post('/fcm-token', authenticateToken, userController.saveFcmToken);
 router.delete('/fcm-token', authenticateToken, userController.deleteFcmToken);
 router.post('/test-push-notification', authenticateToken, userController.testPushNotification);
+
+// Logout API (requires auth)
+router.post('/logout', authenticateToken, userController.logout);
+
+// Profile Details & Update APIs (requires auth)
+router.get('/profile', authenticateToken, userController.getProfile);
+router.put('/profile', authenticateToken, userController.updateProfile);
+
+// Pages Management APIs (secured or public)
+router.post('/pages', authenticateToken, pageController.create);
+router.get('/pages', authenticateToken, pageController.getAll);
+router.get('/pages/by-name/:name', pageController.getByName);
+router.get('/pages/by-name', pageController.getByName);
+router.get('/pages/:id', authenticateToken, pageController.getById);
+router.put('/pages/:id', authenticateToken, pageController.update);
+router.post('/pages/:id/toggle', authenticateToken, pageController.toggleStatus);
+router.delete('/pages/:id', authenticateToken, pageController.delete);
+
+// FAQs Management APIs
+router.post('/faqs', authenticateToken, faqController.create);
+router.get('/faqs/all', authenticateToken, faqController.getAll);
+router.get('/faqs', faqController.getActive); // Public/Users
+router.get('/faqs/:id', authenticateToken, faqController.getById);
+router.put('/faqs/:id', authenticateToken, faqController.update);
+router.post('/faqs/:id/toggle', authenticateToken, faqController.toggleStatus);
+router.delete('/faqs/:id', authenticateToken, faqController.delete);
+
+// Notifications Management & User APIs
+router.post('/notifications', authenticateToken, notificationController.create);
+router.get('/notifications/all-admin', authenticateToken, notificationController.getAllAdmin);
+router.get('/notifications', authenticateToken, notificationController.getUserNotifications);
+router.get('/notifications/:id', authenticateToken, notificationController.getById);
+router.put('/notifications/:id', authenticateToken, notificationController.update);
+router.post('/notifications/:id/toggle', authenticateToken, notificationController.toggleStatus);
+router.delete('/notifications/:id', authenticateToken, notificationController.delete);
+router.post('/notifications/read-all', authenticateToken, notificationController.markAllAsRead);
+router.post('/notifications/:id/read', authenticateToken, notificationController.markAsRead);
 
 module.exports = router;

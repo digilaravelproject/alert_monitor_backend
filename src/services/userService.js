@@ -60,7 +60,7 @@ class UserService {
             throw new ServiceError('Mobile number is already registered', 400);
         }
 
-        const adminId = currentUser.role === 'Super Admin' ? null : currentUser.id;
+        const adminId = currentUser.id;
         const isBlocked = 0; // default not blocked
 
         let roleId = null;
@@ -112,8 +112,7 @@ class UserService {
         });
 
         // Fetch user with location details
-        const staffOwnerAdminId = currentUser.role === 'Super Admin' ? null : currentUser.id;
-        const freshUser = await userRepository.checkStaffOwnership(newUser.id, staffOwnerAdminId, currentUser.role);
+        const freshUser = await userRepository.checkStaffOwnership(newUser.id, adminId);
         return mapUserRow(freshUser[0]);
     }
 
@@ -253,8 +252,8 @@ class UserService {
             throw new ServiceError('Forbidden: Access denied', 403);
         }
 
-        const counts = await userRepository.getStaffStats(adminId, role);
-        const data = await userRepository.findStaff(adminId, role, levelQuery);
+        const counts = await userRepository.getStaffStats(adminId);
+        const data = await userRepository.findStaff(adminId, levelQuery);
 
         return {
             counts,
@@ -271,7 +270,7 @@ class UserService {
             throw new ServiceError('Forbidden: Access denied', 403);
         }
 
-        const results = await userRepository.searchStaff(adminId, role, query);
+        const results = await userRepository.searchStaff(adminId, query);
         return results.map(mapUserRow);
     }
 
@@ -284,7 +283,7 @@ class UserService {
             throw new ServiceError('Forbidden: Access denied', 403);
         }
 
-        const result = await userRepository.checkStaffOwnership(staffId, adminId, role);
+        const result = await userRepository.checkStaffOwnership(staffId, adminId);
         if (result.length === 0) {
             throw new ServiceError('Staff member not found or access denied', 404);
         }
@@ -302,7 +301,7 @@ class UserService {
         }
 
         // Check ownership first
-        const checkResult = await userRepository.checkStaffOwnership(staffId, adminId, currentUserRole);
+        const checkResult = await userRepository.checkStaffOwnership(staffId, adminId);
         if (checkResult.length === 0) {
             throw new ServiceError('Staff member not found or access denied', 404);
         }
@@ -357,7 +356,7 @@ class UserService {
         await userRepository.updateStaff(staffId, name, normalizedPhone, roleId, levelId, parsedLocationId);
 
         // Fetch updated user with location details
-        const freshUser = await userRepository.checkStaffOwnership(staffId, adminId, currentUserRole);
+        const freshUser = await userRepository.checkStaffOwnership(staffId, adminId);
         return mapUserRow(freshUser[0]);
     }
 
@@ -371,7 +370,7 @@ class UserService {
         }
 
         // Check ownership first
-        const checkResult = await userRepository.checkStaffOwnership(staffId, adminId, role);
+        const checkResult = await userRepository.checkStaffOwnership(staffId, adminId);
         if (checkResult.length === 0) {
             throw new ServiceError('Staff member not found or access denied', 404);
         }
@@ -397,7 +396,7 @@ class UserService {
         }
 
         // Check ownership first
-        const checkResult = await userRepository.checkStaffOwnership(staffId, adminId, role);
+        const checkResult = await userRepository.checkStaffOwnership(staffId, adminId);
         if (checkResult.length === 0) {
             throw new ServiceError('Staff member not found or access denied', 404);
         }

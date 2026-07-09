@@ -427,6 +427,99 @@ class UserController {
             });
         }
     }
+
+    async logout(req, res) {
+        try {
+            const { fcm_token } = req.body;
+            if (fcm_token && req.user.role !== 'Super Admin') {
+                const fcmRepository = require('../repositories/fcmRepository');
+                await fcmRepository.deleteToken(req.user.id, fcm_token);
+            }
+            res.status(200).json({
+                status: true,
+                message: 'Logged out successfully'
+            });
+        } catch (error) {
+            res.status(500).json({
+                status: false,
+                error: error.message
+            });
+        }
+    }
+
+    async getProfile(req, res) {
+        try {
+            const userRepository = require('../repositories/userRepository');
+            const profile = await userRepository.getProfile(req.user.id, req.user.role);
+            if (!profile) {
+                return res.status(404).json({
+                    status: false,
+                    error: 'Profile not found'
+                });
+            }
+            res.status(200).json({
+                status: true,
+                data: profile
+            });
+        } catch (error) {
+            res.status(500).json({
+                status: false,
+                error: error.message
+            });
+        }
+    }
+
+    async updateProfile(req, res) {
+        try {
+            const { name, email, phone_number, profile_image } = req.body;
+            const userRepository = require('../repositories/userRepository');
+            
+            let uploadedImageUrl = null;
+            if (profile_image) {
+                if (profile_image.startsWith('data:image/')) {
+                    const fs = require('fs');
+                    const path = require('path');
+                    const matches = profile_image.match(/^data:image\/([A-Za-z+-]+);base64,(.+)$/);
+                    if (!matches || matches.length !== 3) {
+                        return res.status(400).json({
+                            status: false,
+                            error: 'Invalid base64 image data'
+                        });
+                    }
+                    const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+                    const buffer = Buffer.from(matches[2], 'base64');
+                    const uploadsDir = path.join(__dirname, '../../public/uploads');
+                    if (!fs.existsSync(uploadsDir)) {
+                        fs.mkdirSync(uploadsDir, { recursive: true });
+                    }
+                    const fileName = `profile_${req.user.id}_${Date.now()}.${ext}`;
+                    const filePath = path.join(uploadsDir, fileName);
+                    fs.writeFileSync(filePath, buffer);
+                    uploadedImageUrl = `/uploads/${fileName}`;
+                } else {
+                    uploadedImageUrl = profile_image;
+                }
+            }
+
+            const updated = await userRepository.updateProfile(req.user.id, req.user.role, {
+                name,
+                email,
+                phone_number,
+                profile_image: uploadedImageUrl
+            });
+
+            res.status(200).json({
+                status: true,
+                message: 'Profile updated successfully',
+                data: updated
+            });
+        } catch (error) {
+            res.status(500).json({
+                status: false,
+                error: error.message
+            });
+        }
+    }
 }
 
 module.exports = new UserController();

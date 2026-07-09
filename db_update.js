@@ -296,6 +296,125 @@ async function updateSchema() {
                 );
                 PRINT 'Table notification_tracker created.';
             END
+
+            -- Check and add profile_image column to users table
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[users]') AND name = 'profile_image')
+            BEGIN
+                ALTER TABLE [dbo].[users] ADD profile_image NVARCHAR(MAX) NULL;
+                PRINT 'Added profile_image column to users.';
+            END
+
+            -- Check and add name column to super_admins table
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[super_admins]') AND name = 'name')
+            BEGIN
+                ALTER TABLE [dbo].[super_admins] ADD name NVARCHAR(100) NULL;
+                PRINT 'Added name column to super_admins.';
+            END
+
+            -- Check and add phone_number column to super_admins table
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[super_admins]') AND name = 'phone_number')
+            BEGIN
+                ALTER TABLE [dbo].[super_admins] ADD phone_number NVARCHAR(20) NULL;
+                PRINT 'Added phone_number column to super_admins.';
+            END
+
+            -- Check and add profile_image column to super_admins table
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[super_admins]') AND name = 'profile_image')
+            BEGIN
+                ALTER TABLE [dbo].[super_admins] ADD profile_image NVARCHAR(MAX) NULL;
+                PRINT 'Added profile_image column to super_admins.';
+            END
+
+            -- Create pages table
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[pages]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[pages] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    title NVARCHAR(100) NOT NULL,
+                    slug NVARCHAR(100) UNIQUE NOT NULL,
+                    description NVARCHAR(MAX) NULL,
+                    is_active BIT NOT NULL DEFAULT 1,
+                    created_at DATETIME DEFAULT GETDATE(),
+                    updated_at DATETIME DEFAULT GETDATE()
+                );
+                PRINT 'Table pages created.';
+            END
+
+            -- Seed default pages
+            IF NOT EXISTS (SELECT * FROM pages WHERE slug = 'about-us')
+            BEGIN
+                INSERT INTO pages (title, slug, description, is_active)
+                VALUES ('About Us', 'about-us', 'This is the About Us page content.', 1);
+                PRINT 'Seeded About Us page.';
+            END
+
+            IF NOT EXISTS (SELECT * FROM pages WHERE slug = 'privacy-policy')
+            BEGIN
+                INSERT INTO pages (title, slug, description, is_active)
+                VALUES ('Privacy Policy', 'privacy-policy', 'This is the Privacy Policy page content.', 1);
+                PRINT 'Seeded Privacy Policy page.';
+            END
+
+            -- Create faqs table
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[faqs]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[faqs] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    question NVARCHAR(MAX) NOT NULL,
+                    answer NVARCHAR(MAX) NOT NULL,
+                    is_active BIT NOT NULL DEFAULT 1,
+                    created_at DATETIME DEFAULT GETDATE(),
+                    updated_at DATETIME DEFAULT GETDATE()
+                );
+                PRINT 'Table faqs created.';
+            END
+
+            -- Seed default FAQs
+            IF NOT EXISTS (SELECT * FROM faqs)
+            BEGIN
+                INSERT INTO faqs (question, answer, is_active)
+                VALUES ('How do I register a panic button?', 'Go to the Manage Devices menu, click Register Device, enter the device name, serial number/ID, and select the location.', 1),
+                       ('Who receives alert notifications?', 'All registered security guards, supervisors, managers, and administrators receive the alert notifications.', 1);
+                PRINT 'Seeded default FAQs.';
+            END
+
+            -- Create system_notifications table
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[system_notifications]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[system_notifications] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    title NVARCHAR(255) NOT NULL,
+                    message NVARCHAR(MAX) NOT NULL,
+                    is_active BIT NOT NULL DEFAULT 1,
+                    created_at DATETIME DEFAULT GETDATE(),
+                    updated_at DATETIME DEFAULT GETDATE()
+                );
+                PRINT 'Table system_notifications created.';
+            END
+
+            -- Seed default notifications
+            IF NOT EXISTS (SELECT * FROM system_notifications)
+            BEGIN
+                INSERT INTO system_notifications (title, message, is_active)
+                VALUES ('System Maintenance', 'Scheduled maintenance will occur tonight from 2:00 AM to 4:00 AM. System services might be briefly interrupted.', 1),
+                       ('New Security Protocol', 'Please review the new security protocol documentation in the settings dashboard.', 1);
+                PRINT 'Seeded default system notifications.';
+            END
+
+            -- Create user_notification_status table
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[user_notification_status]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[user_notification_status] (
+                    user_id INT NOT NULL,
+                    notification_id INT NOT NULL,
+                    is_read BIT NOT NULL DEFAULT 0,
+                    read_at DATETIME NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (notification_id) REFERENCES system_notifications(id) ON DELETE CASCADE,
+                    PRIMARY KEY (user_id, notification_id)
+                );
+                PRINT 'Table user_notification_status created.';
+            END
         `);
 
         console.log('Database migration completed successfully.');

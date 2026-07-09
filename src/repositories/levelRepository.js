@@ -19,41 +19,36 @@ class LevelRepository {
         return result.recordset[0];
     }
 
-    async getAll(adminId = null, isSuperAdmin = false) {
+    async getAll(adminId) {
         await poolConnect;
         let query = `
             SELECT l.id, l.name, l.description, l.sla_window, l.cycle_count, l.response_logic, l.color, l.admin_id, l.created_at,
                    u.name AS owner_name, u.email AS owner_email
             FROM levels l
             LEFT JOIN users u ON l.admin_id = u.id
+            WHERE l.admin_id = @adminId
         `;
-        const request = pool.request();
-        if (!isSuperAdmin && adminId !== null) {
-            query += ' WHERE l.admin_id = @adminId OR l.admin_id IS NULL';
-            request.input('adminId', sql.Int, adminId);
-        }
+        const request = pool.request().input('adminId', sql.Int, adminId);
         query += ' ORDER BY l.id DESC';
         const result = await request.query(query);
         return result.recordset;
     }
 
-    async getById(id, adminId = null, isSuperAdmin = false) {
+    async getById(id, adminId) {
         await poolConnect;
         let query = `
             SELECT l.id, l.name, l.description, l.sla_window, l.cycle_count, l.response_logic, l.color, l.admin_id, l.created_at
             FROM levels l
-            WHERE l.id = @id
+            WHERE l.id = @id AND l.admin_id = @adminId
         `;
-        const request = pool.request().input('id', sql.Int, id);
-        if (!isSuperAdmin && adminId !== null) {
-            query += ' AND (l.admin_id = @adminId OR l.admin_id IS NULL)';
-            request.input('adminId', sql.Int, adminId);
-        }
+        const request = pool.request()
+            .input('id', sql.Int, id)
+            .input('adminId', sql.Int, adminId);
         const result = await request.query(query);
         return result.recordset[0];
     }
 
-    async search(adminId = null, queryStr, isSuperAdmin = false) {
+    async search(adminId, queryStr) {
         await poolConnect;
         let query = `
             SELECT l.id, l.name, l.description, l.sla_window, l.cycle_count, l.response_logic, l.color, l.admin_id, l.created_at,
@@ -61,12 +56,11 @@ class LevelRepository {
             FROM levels l
             LEFT JOIN users u ON l.admin_id = u.id
             WHERE (l.name LIKE @searchQuery OR l.description LIKE @searchQuery)
+              AND l.admin_id = @adminId
         `;
-        const request = pool.request().input('searchQuery', sql.NVarChar, `%${queryStr.trim()}%`);
-        if (!isSuperAdmin && adminId !== null) {
-            query += ' AND (l.admin_id = @adminId OR l.admin_id IS NULL)';
-            request.input('adminId', sql.Int, adminId);
-        }
+        const request = pool.request()
+            .input('searchQuery', sql.NVarChar, `%${queryStr.trim()}%`)
+            .input('adminId', sql.Int, adminId);
         query += ' ORDER BY l.id DESC';
         const result = await request.query(query);
         return result.recordset;
@@ -104,7 +98,7 @@ class LevelRepository {
         const result = await pool.request()
             .input('admin_id', sql.Int, adminId)
             .input('name', sql.NVarChar, name.trim())
-            .query('SELECT TOP 1 id FROM levels WHERE name = @name AND (admin_id = @admin_id OR admin_id IS NULL)');
+            .query('SELECT TOP 1 id FROM levels WHERE name = @name AND admin_id = @admin_id');
         return result.recordset[0];
     }
 
@@ -114,7 +108,7 @@ class LevelRepository {
             .input('admin_id', sql.Int, adminId)
             .input('name', sql.NVarChar, name.trim())
             .input('id', sql.Int, id)
-            .query('SELECT TOP 1 id FROM levels WHERE name = @name AND id != @id AND (admin_id = @admin_id OR admin_id IS NULL)');
+            .query('SELECT TOP 1 id FROM levels WHERE name = @name AND id != @id AND admin_id = @admin_id');
         return result.recordset[0];
     }
 }

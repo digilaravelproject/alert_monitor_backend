@@ -164,28 +164,22 @@ class UserRepository {
         return result.recordset;
     }
 
-    async getStaffStats(adminId, role) {
+    async getStaffStats(adminId) {
         await poolConnect;
         const result = await pool.request()
             .input('adminId', sql.Int, adminId)
-            .query(role === 'Admin' ? `
+            .query(`
                 SELECT 
                     COUNT(*) as total,
                     SUM(CASE WHEN is_blocked = 0 THEN 1 ELSE 0 END) as on_duty,
                     SUM(CASE WHEN is_blocked = 1 THEN 1 ELSE 0 END) as off_duty
                 FROM users
                 WHERE admin_id = @adminId
-            ` : `
-                SELECT 
-                    COUNT(*) as total,
-                    SUM(CASE WHEN is_blocked = 0 THEN 1 ELSE 0 END) as on_duty,
-                    SUM(CASE WHEN is_blocked = 1 THEN 1 ELSE 0 END) as off_duty
-                FROM users
             `);
         return result.recordset[0] || { total: 0, on_duty: 0, off_duty: 0 };
     }
 
-    async findStaff(adminId, role, levelQuery) {
+    async findStaff(adminId, levelQuery) {
         await poolConnect;
         let queryStr = `
             SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.location_id,
@@ -195,14 +189,9 @@ class UserRepository {
             LEFT JOIN roles r ON u.role_id = r.id
             LEFT JOIN levels l ON u.level_id = l.id
             LEFT JOIN locations loc ON u.location_id = loc.id
-            WHERE 1=1
+            WHERE u.admin_id = @adminId
         `;
-        const request = pool.request();
-
-        if (role === 'Admin') {
-            queryStr += ' AND u.admin_id = @adminId';
-            request.input('adminId', sql.Int, adminId);
-        }
+        const request = pool.request().input('adminId', sql.Int, adminId);
 
         if (levelQuery && levelQuery.toLowerCase() !== 'all') {
             if (/^\d+$/.test(levelQuery)) {
@@ -220,7 +209,7 @@ class UserRepository {
         return result.recordset;
     }
 
-    async searchStaff(adminId, role, query) {
+    async searchStaff(adminId, query) {
         await poolConnect;
         let queryStr = `
             SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.location_id,
@@ -230,20 +219,17 @@ class UserRepository {
             LEFT JOIN roles r ON u.role_id = r.id
             LEFT JOIN levels l ON u.level_id = l.id
             LEFT JOIN locations loc ON u.location_id = loc.id
-            WHERE (u.name LIKE @searchQuery 
+            WHERE u.admin_id = @adminId
+              AND (u.name LIKE @searchQuery 
                OR u.phone_number LIKE @searchQuery 
                OR COALESCE(r.name, u.role) LIKE @searchQuery 
                OR COALESCE(l.name, u.access_level) LIKE @searchQuery 
                OR loc.name LIKE @searchQuery
                OR u.location LIKE @searchQuery)
         `;
-        const request = pool.request();
-        request.input('searchQuery', sql.NVarChar, `%${query.trim()}%`);
-
-        if (role === 'Admin') {
-            queryStr += ' AND u.admin_id = @adminId';
-            request.input('adminId', sql.Int, adminId);
-        }
+        const request = pool.request()
+            .input('adminId', sql.Int, adminId)
+            .input('searchQuery', sql.NVarChar, `%${query.trim()}%`);
 
         queryStr += ' ORDER BY u.id DESC';
 
@@ -251,9 +237,11 @@ class UserRepository {
         return result.recordset;
     }
 
-    async checkStaffOwnership(staffId, adminId, role) {
+    async checkStaffOwnership(staffId, adminId) {
         await poolConnect;
-        const request = pool.request().input('id', sql.Int, staffId);
+        const request = pool.request()
+            .input('id', sql.Int, staffId)
+            .input('adminId', sql.Int, adminId);
         let queryStr = `
             SELECT u.id, u.name, u.email, u.phone_number, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.location_id,
                    loc.name as loc_name, loc.address as loc_address, loc.city as loc_city, loc.zip_code as loc_zip_code, loc.is_active as loc_is_active,
@@ -262,12 +250,8 @@ class UserRepository {
             LEFT JOIN roles r ON u.role_id = r.id
             LEFT JOIN levels l ON u.level_id = l.id
             LEFT JOIN locations loc ON u.location_id = loc.id
-            WHERE u.id = @id
+            WHERE u.id = @id AND u.admin_id = @adminId
         `;
-        if (role === 'Admin') {
-            queryStr += ' AND u.admin_id = @adminId';
-            request.input('adminId', sql.Int, adminId);
-        }
         const result = await request.query(queryStr);
         return result.recordset;
     }
@@ -336,6 +320,61 @@ class UserRepository {
         await pool.request()
             .input('id', sql.Int, staffId)
             .query('DELETE FROM users WHERE id = @id');
+    }
+
+    async getProfile(userId, role) {
+        await poolConnect;
+        if (role === 'Super Admin') {
+            const result = await pool.request()
+                .input('id', sql.Int, userId)
+                .query('SELECT id, name, email, phone_number, profile_image FROM super_admins WHERE id = @id');
+            return result.recordset[0];
+        } else {
+            const result = await pool.request()
+                .input('id', sql.Int, userId)
+                .query(`
+                    SELECT u.id, u.name, u.email, u.phone_number, u.profile_image, COALESCE(r.name, u.role) as role, u.role_id,
+                           loc.name as loc_name, loc.address as loc_address, loc.city as loc_city, loc.zip_code as loc_zip_code
+                    FROM users u
+                    LEFT JOIN roles r ON u.role_id = r.id
+                    LEFT JOIN locations loc ON u.location_id = loc.id
+                    WHERE u.id = @id
+                `);
+            return result.recordset[0];
+        }
+    }
+
+    async updateProfile(userId, role, { name, email, phone_number, profile_image }) {
+        await poolConnect;
+        if (role === 'Super Admin') {
+            const result = await pool.request()
+                .input('id', sql.Int, userId)
+                .input('name', sql.NVarChar, name ? name.trim() : null)
+                .input('email', sql.NVarChar, email ? email.trim() : null)
+                .input('phone_number', sql.NVarChar, phone_number ? phone_number.trim() : null)
+                .input('profile_image', sql.NVarChar, profile_image || null)
+                .query(`
+                    UPDATE super_admins
+                    SET name = @name, email = @email, phone_number = @phone_number, profile_image = @profile_image
+                    OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone_number, INSERTED.profile_image
+                    WHERE id = @id
+                `);
+            return result.recordset[0];
+        } else {
+            const result = await pool.request()
+                .input('id', sql.Int, userId)
+                .input('name', sql.NVarChar, name ? name.trim() : null)
+                .input('email', sql.NVarChar, email ? email.trim() : null)
+                .input('phone_number', sql.NVarChar, phone_number ? phone_number.trim() : null)
+                .input('profile_image', sql.NVarChar, profile_image || null)
+                .query(`
+                    UPDATE users
+                    SET name = @name, email = @email, phone_number = @phone_number, profile_image = @profile_image
+                    OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone_number, INSERTED.profile_image
+                    WHERE id = @id
+                `);
+            return result.recordset[0];
+        }
     }
 }
 

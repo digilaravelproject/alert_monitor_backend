@@ -97,6 +97,18 @@
                     <i class="fa-solid fa-microchip"></i>
                     <span>Manage Devices</span>
                 </a>
+                <a href="#" class="menu-item" id="menu-pages">
+                    <i class="fa-solid fa-file-lines"></i>
+                    <span>Manage Pages</span>
+                </a>
+                <a href="#" class="menu-item" id="menu-faqs">
+                    <i class="fa-regular fa-circle-question"></i>
+                    <span>Manage FAQs</span>
+                </a>
+                <a href="#" class="menu-item" id="menu-notifications">
+                    <i class="fa-regular fa-bell"></i>
+                    <span>Manage Notifications</span>
+                </a>
             </div>
 
             <div class="sidebar-footer">
@@ -568,6 +580,149 @@
                     <!-- Cards Listing Grid Container -->
                     <div class="devices-grid" id="devices-cards-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
                         <!-- Populated dynamically via JS -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- PAGES SECTION -->
+            <div id="pages-section" style="display: none;">
+                <header class="content-header">
+                    <div class="header-title">
+                        <h1>Manage Pages</h1>
+                        <p class="subtitle">View and configure application pages and content</p>
+                    </div>
+                    <button id="open-page-modal-btn" class="btn btn-primary">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Add Page</span>
+                    </button>
+                </header>
+
+                <section class="table-section">
+                    <div class="table-actions">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="page-search-input" placeholder="Search pages...">
+                        </div>
+                        <button id="page-refresh-btn" class="btn btn-secondary">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Page Name (Slug)</th>
+                                    <th>Title</th>
+                                    <th>Description</th>
+                                    <th style="width: 120px; text-align: center;">Status</th>
+                                    <th style="width: 150px; text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pages-table-body">
+                                <tr class="table-loading">
+                                    <td colspan="5">
+                                        <div class="loader-spinner"></div>
+                                        <span>Fetching pages...</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- FAQS SECTION -->
+            <div id="faqs-section" style="display: none;">
+                <header class="content-header">
+                    <div class="header-title">
+                        <h1>Manage FAQs</h1>
+                        <p class="subtitle">Add, edit, and configure Frequently Asked Questions</p>
+                    </div>
+                    <button id="open-faq-modal-btn" class="btn btn-primary">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Add FAQ</span>
+                    </button>
+                </header>
+
+                <section class="table-section">
+                    <div class="table-actions">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="faq-search-input" placeholder="Search FAQs...">
+                        </div>
+                        <button id="faq-refresh-btn" class="btn btn-secondary">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Question</th>
+                                    <th>Answer</th>
+                                    <th style="width: 120px; text-align: center;">Status</th>
+                                    <th style="width: 150px; text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="faqs-table-body">
+                                <tr class="table-loading">
+                                    <td colspan="4">
+                                        <div class="loader-spinner"></div>
+                                        <span>Fetching FAQs...</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- NOTIFICATIONS SECTION -->
+            <div id="notifications-section" style="display: none;">
+                <header class="content-header">
+                    <div class="header-title">
+                        <h1>Manage Notifications</h1>
+                        <p class="subtitle">Create and send push notification broadcasts to all admins and users</p>
+                    </div>
+                    <button id="open-notification-modal-btn" class="btn btn-primary">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>Send Notification</span>
+                    </button>
+                </header>
+
+                <section class="table-section">
+                    <div class="table-actions">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="notification-search-input" placeholder="Search notifications...">
+                        </div>
+                        <button id="notification-refresh-btn" class="btn btn-secondary">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Message</th>
+                                    <th>Date Sent</th>
+                                    <th style="width: 120px; text-align: center;">Status</th>
+                                    <th style="width: 150px; text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="notifications-table-body">
+                                <tr class="table-loading">
+                                    <td colspan="5">
+                                        <div class="loader-spinner"></div>
+                                        <span>Fetching notifications...</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </section>
             </div>
@@ -1120,6 +1275,145 @@
             <footer class="modal-footer">
                 <button type="button" id="btn-close-details-footer" class="btn btn-secondary">Close</button>
             </footer>
+        </div>
+    </div>
+
+    <!-- PAGE MODAL -->
+    <div id="page-modal" class="modal-wrapper">
+        <div class="modal-card" style="max-width: 650px;">
+            <header class="modal-header">
+                <h2 id="page-modal-title">Edit Page</h2>
+                <button id="close-page-modal-btn" class="modal-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <form id="page-form" class="modal-form">
+                <input type="hidden" id="page-id">
+                
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="page-title"><i class="fa-solid fa-heading"></i> Page Title</label>
+                        <input type="text" id="page-title" placeholder="e.g. About Us" required>
+                    </div>
+                    <div class="form-group col-6">
+                        <label for="page-slug"><i class="fa-solid fa-link"></i> Page Name / Slug</label>
+                        <input type="text" id="page-slug" placeholder="e.g. about-us" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="page-desc"><i class="fa-regular fa-file-lines"></i> Description / Content</label>
+                        <textarea id="page-desc" placeholder="Enter page description/content" rows="6" style="width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-main); font-family: inherit; resize: vertical;" required></textarea>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12" style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="page-active" checked style="width: 18px; height: 18px;">
+                        <label for="page-active" style="margin: 0; user-select: none;">Is Active</label>
+                    </div>
+                </div>
+
+                <footer class="modal-footer">
+                    <button type="button" id="cancel-page-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" id="page-submit-btn" class="btn btn-primary">
+                        <span id="page-submit-text">Save Changes</span>
+                        <i class="fa-solid fa-floppy-disk"></i>
+                    </button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+    <!-- FAQ MODAL -->
+    <div id="faq-modal" class="modal-wrapper">
+        <div class="modal-card" style="max-width: 650px;">
+            <header class="modal-header">
+                <h2 id="faq-modal-title">Edit FAQ</h2>
+                <button id="close-faq-modal-btn" class="modal-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <form id="faq-form" class="modal-form">
+                <input type="hidden" id="faq-id">
+                
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="faq-question"><i class="fa-regular fa-circle-question"></i> Question</label>
+                        <input type="text" id="faq-question" placeholder="e.g. How do I register a panic button?" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="faq-answer"><i class="fa-regular fa-message"></i> Answer</label>
+                        <textarea id="faq-answer" placeholder="Enter FAQ answer" rows="5" style="width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-main); font-family: inherit; resize: vertical;" required></textarea>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12" style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="faq-active" checked style="width: 18px; height: 18px;">
+                        <label for="faq-active" style="margin: 0; user-select: none;">Is Active</label>
+                    </div>
+                </div>
+
+                <footer class="modal-footer">
+                    <button type="button" id="cancel-faq-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" id="faq-submit-btn" class="btn btn-primary">
+                        <span id="faq-submit-text">Save Changes</span>
+                        <i class="fa-solid fa-floppy-disk"></i>
+                    </button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION MODAL -->
+    <div id="notification-modal" class="modal-wrapper">
+        <div class="modal-card" style="max-width: 650px;">
+            <header class="modal-header">
+                <h2 id="notification-modal-title">Send Notification</h2>
+                <button id="close-notification-modal-btn" class="modal-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <form id="notification-form" class="modal-form">
+                <input type="hidden" id="notification-id">
+                
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="notification-title"><i class="fa-solid fa-heading"></i> Notification Title</label>
+                        <input type="text" id="notification-title" placeholder="e.g. Scheduled System Maintenance" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12">
+                        <label for="notification-msg"><i class="fa-regular fa-envelope"></i> Message Body</label>
+                        <textarea id="notification-msg" placeholder="Enter notification message" rows="4" style="width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-main); font-family: inherit; resize: vertical;" required></textarea>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-12" style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="notification-active" checked style="width: 18px; height: 18px;">
+                        <label for="notification-active" style="margin: 0; user-select: none;">Is Active (Broadcast immediately)</label>
+                    </div>
+                </div>
+
+                <footer class="modal-footer">
+                    <button type="button" id="cancel-notification-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" id="notification-submit-btn" class="btn btn-primary">
+                        <span id="notification-submit-text">Send Broadcast</span>
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </footer>
+            </form>
         </div>
     </div>
 

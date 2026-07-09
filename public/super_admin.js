@@ -52,12 +52,60 @@ const menuLevels = document.getElementById('menu-levels');
 const menuRoles = document.getElementById('menu-roles');
 const menuLocations = document.getElementById('menu-locations');
 const menuDevices = document.getElementById('menu-devices');
+const menuPages = document.getElementById('menu-pages');
 const staffSection = document.getElementById('staff-section');
 const permissionsSection = document.getElementById('permissions-section');
 const levelsSection = document.getElementById('levels-section');
 const rolesSection = document.getElementById('roles-section');
 const locationsSection = document.getElementById('locations-section');
 const devicesSection = document.getElementById('devices-section');
+const pagesSection = document.getElementById('pages-section');
+
+// Pages DOM Elements
+const pagesTableBody = document.getElementById('pages-table-body');
+const pageSearchInput = document.getElementById('page-search-input');
+const pageRefreshBtn = document.getElementById('page-refresh-btn');
+const openPageModalBtn = document.getElementById('open-page-modal-btn');
+const closePageModalBtn = document.getElementById('close-page-modal-btn');
+const cancelPageBtn = document.getElementById('cancel-page-btn');
+const pageModal = document.getElementById('page-modal');
+const pageForm = document.getElementById('page-form');
+const pageModalTitle = document.getElementById('page-modal-title');
+const pageSubmitText = document.getElementById('page-submit-text');
+
+let pagesList = [];
+
+const menuFaqs = document.getElementById('menu-faqs');
+const menuNotifications = document.getElementById('menu-notifications');
+const faqsSection = document.getElementById('faqs-section');
+const notificationsSection = document.getElementById('notifications-section');
+
+// FAQs DOM Elements
+const faqsTableBody = document.getElementById('faqs-table-body');
+const faqSearchInput = document.getElementById('faq-search-input');
+const faqRefreshBtn = document.getElementById('faq-refresh-btn');
+const openFaqModalBtn = document.getElementById('open-faq-modal-btn');
+const closeFaqModalBtn = document.getElementById('close-faq-modal-btn');
+const cancelFaqBtn = document.getElementById('cancel-faq-btn');
+const faqModal = document.getElementById('faq-modal');
+const faqForm = document.getElementById('faq-form');
+const faqModalTitle = document.getElementById('faq-modal-title');
+const faqSubmitText = document.getElementById('faq-submit-text');
+
+// Notifications DOM Elements
+const notificationsTableBody = document.getElementById('notifications-table-body');
+const notificationSearchInput = document.getElementById('notification-search-input');
+const notificationRefreshBtn = document.getElementById('notification-refresh-btn');
+const openNotificationModalBtn = document.getElementById('open-notification-modal-btn');
+const closeNotificationModalBtn = document.getElementById('close-notification-modal-btn');
+const cancelNotificationBtn = document.getElementById('cancel-notification-btn');
+const notificationModal = document.getElementById('notification-modal');
+const notificationForm = document.getElementById('notification-form');
+const notificationModalTitle = document.getElementById('notification-modal-title');
+const notificationSubmitText = document.getElementById('notification-submit-text');
+
+let faqsList = [];
+let notificationsList = [];
 const permissionsTableBody = document.getElementById('permissions-table-body');
 const permissionSearchInput = document.getElementById('permission-search-input');
 const permissionRefreshBtn = document.getElementById('permission-refresh-btn');
@@ -801,11 +849,29 @@ menuDevices.addEventListener('click', (e) => {
     fetchDevices();
 });
 
+menuPages.addEventListener('click', (e) => {
+    e.preventDefault();
+    setActiveMenu(menuPages, pagesSection);
+    fetchPages();
+});
+
+menuFaqs.addEventListener('click', (e) => {
+    e.preventDefault();
+    setActiveMenu(menuFaqs, faqsSection);
+    fetchFaqs();
+});
+
+menuNotifications.addEventListener('click', (e) => {
+    e.preventDefault();
+    setActiveMenu(menuNotifications, notificationsSection);
+    fetchNotifications();
+});
+
 function setActiveMenu(menuItem, sectionItem) {
-    [menuVendors, menuStaff, menuPermissions, menuLevels, menuRoles, menuLocations, menuDevices].forEach(m => {
+    [menuVendors, menuStaff, menuPermissions, menuLevels, menuRoles, menuLocations, menuDevices, menuPages, menuFaqs, menuNotifications].forEach(m => {
         if (m) m.classList.remove('active');
     });
-    [vendorsSection, staffSection, permissionsSection, levelsSection, rolesSection, locationsSection, devicesSection].forEach(s => {
+    [vendorsSection, staffSection, permissionsSection, levelsSection, rolesSection, locationsSection, devicesSection, pagesSection, faqsSection, notificationsSection].forEach(s => {
         if (s) s.style.display = 'none';
     });
     menuItem.classList.add('active');
@@ -2649,6 +2715,682 @@ window.dismissAlertInList = dismissAlertInList;
 window.openAlertDetailsModal = openAlertDetailsModal;
 window.closeAlertDetailsModal = closeAlertDetailsModal;
 window.openDeviceAnalysisModalFromAlerts = openDeviceAnalysisModalFromAlerts;
+
+// ==========================================
+// PAGES SECTION
+// ==========================================
+
+// Fetch Pages
+async function fetchPages() {
+    pagesTableBody.innerHTML = `
+        <tr class="table-loading">
+            <td colspan="5">
+                <div class="loader-spinner"></div>
+                <span>Fetching pages...</span>
+            </td>
+        </tr>
+    `;
+
+    try {
+        const response = await fetch(`${API_URL}/pages`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            pagesList = resData.data;
+            renderPages(pagesList);
+        } else {
+            showToast(resData.error || 'Failed to retrieve pages.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to fetch pages from server.', 'error');
+        console.error(err);
+    }
+}
+
+// Render Pages to Table
+function renderPages(pages) {
+    if (!pages || pages.length === 0) {
+        pagesTableBody.innerHTML = `
+            <tr class="table-empty">
+                <td colspan="5">
+                    <i class="fa-regular fa-folder-open"></i>
+                    <span>No pages found.</span>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    pagesTableBody.innerHTML = pages.map(page => {
+        const checkedAttr = page.is_active ? 'checked' : '';
+        const shortDesc = page.description && page.description.length > 60 
+            ? escapeHTML(page.description.substring(0, 60)) + '...'
+            : escapeHTML(page.description || 'N/A');
+
+        return `
+            <tr>
+                <td style="font-weight: 600; color: var(--accent-light);">${escapeHTML(page.slug)}</td>
+                <td>${escapeHTML(page.title)}</td>
+                <td>${shortDesc}</td>
+                <td style="text-align: center;">
+                    <label class="switch" style="margin: 0 auto; display: inline-flex;">
+                        <input type="checkbox" ${checkedAttr} onchange="togglePageStatus(${page.id})">
+                        <span class="slider round"></span>
+                    </label>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon btn-edit" onclick="openEditPageModal(${page.id})" title="Edit">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" onclick="deletePage(${page.id})" title="Delete">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Modal Actions for Pages
+function openAddPageModal() {
+    pageModalTitle.textContent = 'Add New Page';
+    pageSubmitText.textContent = 'Save Page';
+    document.getElementById('page-id').value = '';
+    pageForm.reset();
+    document.getElementById('page-active').checked = true;
+    pageModal.classList.add('open');
+}
+
+function openEditPageModal(id) {
+    const page = pagesList.find(p => p.id === id);
+    if (!page) return;
+    pageModalTitle.textContent = 'Edit Page';
+    pageSubmitText.textContent = 'Save Changes';
+    document.getElementById('page-id').value = page.id;
+    document.getElementById('page-title').value = page.title;
+    document.getElementById('page-slug').value = page.slug;
+    document.getElementById('page-desc').value = page.description || '';
+    document.getElementById('page-active').checked = page.is_active;
+    pageModal.classList.add('open');
+}
+
+function closePageModal() {
+    pageModal.classList.remove('open');
+    pageForm.reset();
+}
+
+// Toggle status of a page
+async function togglePageStatus(id) {
+    try {
+        const response = await fetch(`${API_URL}/pages/${id}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast(resData.message || 'Page status updated.', 'success');
+            fetchPages();
+        } else {
+            showToast(resData.error || 'Failed to toggle page status.', 'error');
+            fetchPages();
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+        fetchPages();
+    }
+}
+
+// Delete a page
+async function deletePage(id) {
+    if (!confirm('Are you sure you want to delete this page?')) return;
+
+    try {
+        const response = await fetch(`${API_URL}/pages/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast(resData.message || 'Page deleted successfully.', 'success');
+            fetchPages();
+        } else {
+            showToast(resData.error || 'Failed to delete page.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+    }
+}
+
+// Page Form Submit (Create / Update)
+pageForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById('page-id').value;
+    const title = document.getElementById('page-title').value;
+    const slug = document.getElementById('page-slug').value;
+    const description = document.getElementById('page-desc').value;
+    const is_active = document.getElementById('page-active').checked;
+
+    const payload = { title, slug, description, is_active };
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_URL}/pages/${id}` : `${API_URL}/pages`;
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast(id ? 'Page updated successfully.' : 'Page created successfully.', 'success');
+            closePageModal();
+            fetchPages();
+        } else {
+            showToast(resData.error || 'Failed to save page.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+    }
+});
+
+// Event Listeners for Page Modals
+openPageModalBtn.addEventListener('click', openAddPageModal);
+closePageModalBtn.addEventListener('click', closePageModal);
+cancelPageBtn.addEventListener('click', closePageModal);
+pageRefreshBtn.addEventListener('click', fetchPages);
+
+// Search Page input listener
+pageSearchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+    if (!query) {
+        renderPages(pagesList);
+        return;
+    }
+
+    const filtered = pagesList.filter(p => 
+        p.title.toLowerCase().includes(query) || 
+        p.slug.toLowerCase().includes(query) || 
+        (p.description && p.description.toLowerCase().includes(query))
+    );
+    renderPages(filtered);
+});
+
+// Expose page functions globally
+window.openEditPageModal = openEditPageModal;
+window.togglePageStatus = togglePageStatus;
+window.deletePage = deletePage;
+
+// ==========================================
+// FAQS SECTION
+// ==========================================
+
+// Fetch FAQs
+async function fetchFaqs() {
+    faqsTableBody.innerHTML = `
+        <tr class="table-loading">
+            <td colspan="4">
+                <div class="loader-spinner"></div>
+                <span>Fetching FAQs...</span>
+            </td>
+        </tr>
+    `;
+
+    try {
+        const response = await fetch(`${API_URL}/faqs/all`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            faqsList = resData.data;
+            renderFaqs(faqsList);
+        } else {
+            showToast(resData.error || 'Failed to retrieve FAQs.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to fetch FAQs from server.', 'error');
+        console.error(err);
+    }
+}
+
+// Render FAQs to Table
+function renderFaqs(faqs) {
+    if (!faqs || faqs.length === 0) {
+        faqsTableBody.innerHTML = `
+            <tr class="table-empty">
+                <td colspan="4">
+                    <i class="fa-regular fa-folder-open"></i>
+                    <span>No FAQs found.</span>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    faqsTableBody.innerHTML = faqs.map(faq => {
+        const checkedAttr = faq.is_active ? 'checked' : '';
+        const shortAnswer = faq.answer && faq.answer.length > 80 
+            ? escapeHTML(faq.answer.substring(0, 80)) + '...'
+            : escapeHTML(faq.answer || 'N/A');
+
+        return `
+            <tr>
+                <td style="font-weight: 600; color: var(--accent-light);">${escapeHTML(faq.question)}</td>
+                <td>${shortAnswer}</td>
+                <td style="text-align: center;">
+                    <label class="switch" style="margin: 0 auto; display: inline-flex;">
+                        <input type="checkbox" ${checkedAttr} onchange="toggleFaqStatus(${faq.id})">
+                        <span class="slider round"></span>
+                    </label>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon btn-edit" onclick="openEditFaqModal(${faq.id})" title="Edit">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" onclick="deleteFaq(${faq.id})" title="Delete">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Modal Actions for FAQs
+function openAddFaqModal() {
+    faqModalTitle.textContent = 'Add New FAQ';
+    faqSubmitText.textContent = 'Save FAQ';
+    document.getElementById('faq-id').value = '';
+    faqForm.reset();
+    document.getElementById('faq-active').checked = true;
+    faqModal.classList.add('open');
+}
+
+function openEditFaqModal(id) {
+    const faq = faqsList.find(f => f.id === id);
+    if (!faq) return;
+    faqModalTitle.textContent = 'Edit FAQ';
+    faqSubmitText.textContent = 'Save Changes';
+    document.getElementById('faq-id').value = faq.id;
+    document.getElementById('faq-question').value = faq.question;
+    document.getElementById('faq-answer').value = faq.answer;
+    document.getElementById('faq-active').checked = faq.is_active;
+    faqModal.classList.add('open');
+}
+
+function closeFaqModal() {
+    faqModal.classList.remove('open');
+    faqForm.reset();
+}
+
+// Toggle status of an FAQ
+async function toggleFaqStatus(id) {
+    try {
+        const response = await fetch(`${API_URL}/faqs/${id}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast(resData.message || 'FAQ status updated.', 'success');
+            fetchFaqs();
+        } else {
+            showToast(resData.error || 'Failed to toggle FAQ status.', 'error');
+            fetchFaqs();
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+        fetchFaqs();
+    }
+}
+
+// Delete an FAQ
+async function deleteFaq(id) {
+    if (!confirm('Are you sure you want to delete this FAQ?')) return;
+
+    try {
+        const response = await fetch(`${API_URL}/faqs/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast(resData.message || 'FAQ deleted successfully.', 'success');
+            fetchFaqs();
+        } else {
+            showToast(resData.error || 'Failed to delete FAQ.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+    }
+}
+
+// FAQ Form Submit (Create / Update)
+faqForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById('faq-id').value;
+    const question = document.getElementById('faq-question').value;
+    const answer = document.getElementById('faq-answer').value;
+    const is_active = document.getElementById('faq-active').checked;
+
+    const payload = { question, answer, is_active };
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_URL}/faqs/${id}` : `${API_URL}/faqs`;
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast(id ? 'FAQ updated successfully.' : 'FAQ created successfully.', 'success');
+            closeFaqModal();
+            fetchFaqs();
+        } else {
+            showToast(resData.error || 'Failed to save FAQ.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+    }
+});
+
+// Event Listeners for FAQ Modals
+openFaqModalBtn.addEventListener('click', openAddFaqModal);
+closeFaqModalBtn.addEventListener('click', closeFaqModal);
+cancelFaqBtn.addEventListener('click', closeFaqModal);
+faqRefreshBtn.addEventListener('click', fetchFaqs);
+
+// Search FAQ input listener
+faqSearchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+    if (!query) {
+        renderFaqs(faqsList);
+        return;
+    }
+
+    const filtered = faqsList.filter(f => 
+        f.question.toLowerCase().includes(query) || 
+        f.answer.toLowerCase().includes(query)
+    );
+    renderFaqs(filtered);
+});
+
+// ==========================================
+// NOTIFICATIONS SECTION
+// ==========================================
+
+// Fetch Notifications
+async function fetchNotifications() {
+    notificationsTableBody.innerHTML = `
+        <tr class="table-loading">
+            <td colspan="5">
+                <div class="loader-spinner"></div>
+                <span>Fetching notifications...</span>
+            </td>
+        </tr>
+    `;
+
+    try {
+        const response = await fetch(`${API_URL}/notifications/all-admin`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            notificationsList = resData.data;
+            renderNotifications(notificationsList);
+        } else {
+            showToast(resData.error || 'Failed to retrieve notifications.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to fetch notifications from server.', 'error');
+        console.error(err);
+    }
+}
+
+// Render Notifications to Table
+function renderNotifications(notifications) {
+    if (!notifications || notifications.length === 0) {
+        notificationsTableBody.innerHTML = `
+            <tr class="table-empty">
+                <td colspan="5">
+                    <i class="fa-regular fa-folder-open"></i>
+                    <span>No notifications found.</span>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    notificationsTableBody.innerHTML = notifications.map(notif => {
+        const checkedAttr = notif.is_active ? 'checked' : '';
+        const shortMsg = notif.message && notif.message.length > 70 
+            ? escapeHTML(notif.message.substring(0, 70)) + '...'
+            : escapeHTML(notif.message || 'N/A');
+        
+        let dateStr = 'N/A';
+        if (notif.created_at) {
+            const date = new Date(notif.created_at);
+            dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        return `
+            <tr>
+                <td style="font-weight: 600; color: var(--accent-light);">${escapeHTML(notif.title)}</td>
+                <td>${shortMsg}</td>
+                <td>${escapeHTML(dateStr)}</td>
+                <td style="text-align: center;">
+                    <label class="switch" style="margin: 0 auto; display: inline-flex;">
+                        <input type="checkbox" ${checkedAttr} onchange="toggleNotificationStatus(${notif.id})">
+                        <span class="slider round"></span>
+                    </label>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon btn-edit" onclick="openEditNotificationModal(${notif.id})" title="Edit">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" onclick="deleteNotification(${notif.id})" title="Delete">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Modal Actions for Notifications
+function openAddNotificationModal() {
+    notificationModalTitle.textContent = 'Send Broadcast Notification';
+    notificationSubmitText.textContent = 'Send Broadcast';
+    document.getElementById('notification-id').value = '';
+    notificationForm.reset();
+    document.getElementById('notification-active').checked = true;
+    notificationModal.classList.add('open');
+}
+
+function openEditNotificationModal(id) {
+    const notif = notificationsList.find(n => n.id === id);
+    if (!notif) return;
+    notificationModalTitle.textContent = 'Edit Broadcast Details';
+    notificationSubmitText.textContent = 'Save Changes';
+    document.getElementById('notification-id').value = notif.id;
+    document.getElementById('notification-title').value = notif.title;
+    document.getElementById('notification-msg').value = notif.message;
+    document.getElementById('notification-active').checked = notif.is_active;
+    notificationModal.classList.add('open');
+}
+
+function closeNotificationModal() {
+    notificationModal.classList.remove('open');
+    notificationForm.reset();
+}
+
+// Toggle status of a notification
+async function toggleNotificationStatus(id) {
+    try {
+        const response = await fetch(`${API_URL}/notifications/${id}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast(resData.message || 'Notification status updated.', 'success');
+            fetchNotifications();
+        } else {
+            showToast(resData.error || 'Failed to toggle status.', 'error');
+            fetchNotifications();
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+        fetchNotifications();
+    }
+}
+
+// Delete a notification
+async function deleteNotification(id) {
+    if (!confirm('Are you sure you want to delete this notification?')) return;
+
+    try {
+        const response = await fetch(`${API_URL}/notifications/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast(resData.message || 'Notification deleted successfully.', 'success');
+            fetchNotifications();
+        } else {
+            showToast(resData.error || 'Failed to delete notification.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+    }
+}
+
+// Notification Form Submit (Create / Update)
+notificationForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById('notification-id').value;
+    const title = document.getElementById('notification-title').value;
+    const message = document.getElementById('notification-msg').value;
+    const is_active = document.getElementById('notification-active').checked;
+
+    const payload = { title, message, is_active };
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_URL}/notifications/${id}` : `${API_URL}/notifications`;
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            showToast(id ? 'Notification updated successfully.' : 'Notification broadcasted successfully.', 'success');
+            closeNotificationModal();
+            fetchNotifications();
+        } else {
+            showToast(resData.error || 'Failed to send notification.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to connect to server.', 'error');
+    }
+});
+
+// Event Listeners for Notification Modals
+openNotificationModalBtn.addEventListener('click', openAddNotificationModal);
+closeNotificationModalBtn.addEventListener('click', closeNotificationModal);
+cancelNotificationBtn.addEventListener('click', closeNotificationModal);
+notificationRefreshBtn.addEventListener('click', fetchNotifications);
+
+// Search Notification input listener
+notificationSearchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+    if (!query) {
+        renderNotifications(notificationsList);
+        return;
+    }
+
+    const filtered = notificationsList.filter(n => 
+        n.title.toLowerCase().includes(query) || 
+        n.message.toLowerCase().includes(query)
+    );
+    renderNotifications(filtered);
+});
+
+// Expose FAQ & Notification functions globally
+window.openEditFaqModal = openEditFaqModal;
+window.toggleFaqStatus = toggleFaqStatus;
+window.deleteFaq = deleteFaq;
+
+window.openEditNotificationModal = openEditNotificationModal;
+window.toggleNotificationStatus = toggleNotificationStatus;
+window.deleteNotification = deleteNotification;
 
 // Initial Bootstrapping
 window.addEventListener('DOMContentLoaded', checkAuth);
