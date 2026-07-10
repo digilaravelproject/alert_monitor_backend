@@ -178,8 +178,16 @@ class UserService {
         const verifiedUser = {
             id: user.id,
             name: user.name,
+            email: user.email,
             phone_number: user.phone_number,
+            profile_image: user.profile_image,
             role: user.role,
+            role_id: user.role_id,
+            location_id: user.location_id,
+            loc_name: user.loc_name,
+            loc_address: user.loc_address,
+            loc_city: user.loc_city,
+            loc_zip_code: user.loc_zip_code,
             access_level: user.access_level,
             location: user.location_id ? {
                 id: user.location_id,
