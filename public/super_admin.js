@@ -355,7 +355,7 @@ function renderUsers(users) {
                 <td>
                     <div class="action-buttons">
                         <button class="btn-icon btn-view" onclick="openViewStaffModal(${user.id})" title="View">
-                            <i class="fa-solid fa-eye"></i>
+                            <i class="fa-solid fa-eye" style="color: white !important;"></i>
                         </button>
                         <button class="btn-icon btn-edit" onclick="openEditStaffModal(${user.id})" title="Edit">
                             <i class="fa-solid fa-pen"></i>
