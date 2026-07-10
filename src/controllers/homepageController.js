@@ -11,9 +11,15 @@ class HomepageController {
             // }
 
             const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const isAdmin = req.user.role === 'Admin';
 
-            const data = await homepageRepository.getHomepageData(adminId, isSuperAdmin);
+            let data;
+            if (isSuperAdmin || isAdmin) {
+                const adminId = isSuperAdmin ? null : req.user.id;
+                data = await homepageRepository.getHomepageData(adminId, isSuperAdmin);
+            } else {
+                data = await homepageRepository.getNonAdminHomepageData(req.user.id);
+            }
 
             res.status(200).json({
                 status: true,
