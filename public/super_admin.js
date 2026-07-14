@@ -47,6 +47,7 @@ const statActiveVendors = document.getElementById('stat-active-vendors');
 const statBlockedVendors = document.getElementById('stat-blocked-vendors');
 
 const menuStaff = document.getElementById('menu-staff');
+const menuComity = document.getElementById('menu-comity');
 const menuPermissions = document.getElementById('menu-permissions');
 const menuLevels = document.getElementById('menu-levels');
 const menuRoles = document.getElementById('menu-roles');
@@ -54,12 +55,30 @@ const menuLocations = document.getElementById('menu-locations');
 const menuDevices = document.getElementById('menu-devices');
 const menuPages = document.getElementById('menu-pages');
 const staffSection = document.getElementById('staff-section');
+const comitySection = document.getElementById('comity-section');
 const permissionsSection = document.getElementById('permissions-section');
 const levelsSection = document.getElementById('levels-section');
 const rolesSection = document.getElementById('roles-section');
 const locationsSection = document.getElementById('locations-section');
 const devicesSection = document.getElementById('devices-section');
 const pagesSection = document.getElementById('pages-section');
+
+// Comity DOM Elements
+const comityGrid = document.getElementById('comity-grid');
+const comityOpenAddBtn = document.getElementById('comity-open-add-btn');
+const comityModal = document.getElementById('comity-modal');
+const closeComityModalBtn = document.getElementById('close-comity-modal-btn');
+const cancelComityBtn = document.getElementById('cancel-comity-btn');
+const comityStaffSearchInput = document.getElementById('comity-staff-search-input');
+const comityStaffListContainer = document.getElementById('comity-staff-list-container');
+const comityAddSelectedBtn = document.getElementById('comity-add-selected-btn');
+
+const statTotalComity = document.getElementById('stat-total-comity');
+const statActiveComity = document.getElementById('stat-active-comity');
+const statInactiveComity = document.getElementById('stat-inactive-comity');
+
+let selectedComityStaffIds = [];
+let comityStaffList = [];
 
 // Pages DOM Elements
 const pagesTableBody = document.getElementById('pages-table-body');
@@ -819,6 +838,12 @@ menuStaff.addEventListener('click', (e) => {
     setActiveMenu(menuStaff, staffSection);
 });
 
+menuComity.addEventListener('click', (e) => {
+    e.preventDefault();
+    setActiveMenu(menuComity, comitySection);
+    fetchComityMembers();
+});
+
 menuPermissions.addEventListener('click', (e) => {
     e.preventDefault();
     setActiveMenu(menuPermissions, permissionsSection);
@@ -868,10 +893,10 @@ menuNotifications.addEventListener('click', (e) => {
 });
 
 function setActiveMenu(menuItem, sectionItem) {
-    [menuVendors, menuStaff, menuPermissions, menuLevels, menuRoles, menuLocations, menuDevices, menuPages, menuFaqs, menuNotifications].forEach(m => {
+    [menuVendors, menuStaff, menuComity, menuPermissions, menuLevels, menuRoles, menuLocations, menuDevices, menuPages, menuFaqs, menuNotifications].forEach(m => {
         if (m) m.classList.remove('active');
     });
-    [vendorsSection, staffSection, permissionsSection, levelsSection, rolesSection, locationsSection, devicesSection, pagesSection, faqsSection, notificationsSection].forEach(s => {
+    [vendorsSection, staffSection, comitySection, permissionsSection, levelsSection, rolesSection, locationsSection, devicesSection, pagesSection, faqsSection, notificationsSection].forEach(s => {
         if (s) s.style.display = 'none';
     });
     menuItem.classList.add('active');
@@ -3391,6 +3416,293 @@ window.deleteFaq = deleteFaq;
 window.openEditNotificationModal = openEditNotificationModal;
 window.toggleNotificationStatus = toggleNotificationStatus;
 window.deleteNotification = deleteNotification;
+
+// ==================== COMITY MEMBERS SYSTEM ====================
+async function fetchComityMembers() {
+    comityGrid.innerHTML = `
+        <div class="table-loading" style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 0;">
+            <div class="loader-spinner"></div>
+            <span style="margin-top: 12px; color: var(--text-muted);">Fetching comity members...</span>
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`${API_URL}/comity/members`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+
+        if (response.ok && resData.status) {
+            // Update stats
+            statTotalComity.textContent = resData.counts.total || 0;
+            statActiveComity.textContent = resData.counts.active || 0;
+            statInactiveComity.textContent = resData.counts.inactive || 0;
+
+            renderComityMembers(resData.data);
+        } else {
+            showToast(resData.error || 'Failed to retrieve comity members.', 'error');
+        }
+    } catch (err) {
+        showToast('Failed to fetch comity members from server.', 'error');
+        console.error(err);
+    }
+}
+
+function renderComityMembers(members) {
+    if (!members || members.length === 0) {
+        comityGrid.innerHTML = `
+            <div class="table-empty" style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 0;">
+                <i class="fa-regular fa-folder-open" style="font-size: 36px; margin-bottom: 12px; color: var(--text-darker);"></i>
+                <span style="color: var(--text-muted);">No comity members found.</span>
+            </div>
+        `;
+        return;
+    }
+
+    comityGrid.innerHTML = members.map(m => {
+        const name = m.name || 'N/A';
+        const initial = name.charAt(0).toUpperCase();
+        const activeClass = m.is_active ? 'active' : 'inactive';
+        const activeLabel = m.is_active ? 'ACTIVE' : 'INACTIVE';
+        const checkedAttr = m.is_active ? 'checked' : '';
+
+        return `
+            <div class="comity-card" data-user-id="${m.user_id}">
+                <div class="comity-member-info">
+                    <div class="comity-avatar">${initial}</div>
+                    <div class="comity-details">
+                        <span class="comity-name">${escapeHTML(name)}</span>
+                        <span class="comity-phone"><i class="fa-solid fa-phone"></i> ${escapeHTML(m.phone_number)}</span>
+                        <span class="comity-badge ${activeClass}">${activeLabel}</span>
+                    </div>
+                </div>
+                <div class="comity-actions">
+                    <label class="comity-switch">
+                        <input type="checkbox" onchange="toggleComityMemberStatus(${m.user_id})" ${checkedAttr}>
+                        <span class="comity-slider"></span>
+                    </label>
+                    <button class="btn-comity-remove" onclick="removeComityMember(${m.user_id})" title="Remove Member">
+                        <i class="fa-solid fa-circle-minus"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function toggleComityMemberStatus(userId) {
+    try {
+        const response = await fetch(`${API_URL}/comity/members/${userId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            showToast(resData.message || 'Status updated successfully.', 'success');
+            fetchComityMembers();
+        } else {
+            showToast(resData.error || 'Failed to toggle status.', 'error');
+            fetchComityMembers(); // reload list to reset switch
+        }
+    } catch (err) {
+        showToast('Network error while toggling status.', 'error');
+        console.error(err);
+        fetchComityMembers(); // reload list to reset switch
+    }
+}
+
+async function removeComityMember(userId) {
+    if (!confirm('Are you sure you want to remove this member from the comity?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/comity/members/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            showToast(resData.message || 'Member removed successfully.', 'success');
+            fetchComityMembers();
+        } else {
+            showToast(resData.error || 'Failed to remove member.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error while removing member.', 'error');
+        console.error(err);
+    }
+}
+
+// Modal select methods
+function openComityModal() {
+    selectedComityStaffIds = [];
+    comityStaffSearchInput.value = '';
+    comityModal.classList.add('open');
+    fetchComityStaff('');
+}
+
+function closeComityModal() {
+    comityModal.classList.remove('open');
+}
+
+async function fetchComityStaff(query = '') {
+    comityStaffListContainer.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; padding: 30px 0; gap: 8px;">
+            <div class="loader-spinner" style="width: 18px; height: 18px; border-width: 2px;"></div>
+            <span style="font-size: 13px; color: var(--text-muted);">Loading staff...</span>
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`${API_URL}/comity/staff?query=${encodeURIComponent(query)}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            comityStaffList = resData.data;
+            renderComityStaffList(comityStaffList);
+        } else {
+            comityStaffListContainer.innerHTML = `<span style="color: var(--error); padding: 10px; display: block; font-size: 13px;">${escapeHTML(resData.error || 'Failed to load staff')}</span>`;
+        }
+    } catch (err) {
+        comityStaffListContainer.innerHTML = '<span style="color: var(--error); padding: 10px; display: block; font-size: 13px;">Failed to connect to server.</span>';
+        console.error(err);
+    }
+}
+
+function renderComityStaffList(staff) {
+    // Filter out staff members who are already comity members
+    const eligibleStaff = staff.filter(s => !s.is_commity_member);
+
+    if (eligibleStaff.length === 0) {
+        comityStaffListContainer.innerHTML = `
+            <div style="text-align: center; padding: 30px 0; color: var(--text-muted); font-size: 13px;">
+                <i class="fa-regular fa-folder-open" style="font-size: 24px; margin-bottom: 8px; display: block; color: var(--text-darker);"></i>
+                No new staff members available to add.
+            </div>
+        `;
+        updateComitySelectedButton();
+        return;
+    }
+
+    comityStaffListContainer.innerHTML = eligibleStaff.map(s => {
+        const name = s.name || 'N/A';
+        const initial = name.charAt(0).toUpperCase();
+        const isChecked = selectedComityStaffIds.includes(s.id) ? 'checked' : '';
+
+        return `
+            <div class="comity-staff-item">
+                <div class="comity-staff-item-info">
+                    <div class="comity-staff-avatar">${initial}</div>
+                    <div class="comity-staff-details">
+                        <span class="comity-staff-name">${escapeHTML(name)}</span>
+                        <span class="comity-staff-phone"><i class="fa-solid fa-phone"></i> ${escapeHTML(s.phone_number)}</span>
+                    </div>
+                </div>
+                <div class="comity-staff-checkbox-wrapper">
+                    <input type="checkbox" class="comity-staff-checkbox" data-id="${s.id}" ${isChecked} onchange="handleComityStaffSelect(this, ${s.id})">
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    updateComitySelectedButton();
+}
+
+function handleComityStaffSelect(checkbox, id) {
+    if (checkbox.checked) {
+        if (!selectedComityStaffIds.includes(id)) {
+            selectedComityStaffIds.push(id);
+        }
+    } else {
+        selectedComityStaffIds = selectedComityStaffIds.filter(val => val !== id);
+    }
+    updateComitySelectedButton();
+}
+
+function updateComitySelectedButton() {
+    const count = selectedComityStaffIds.length;
+    const btnText = comityAddSelectedBtn.querySelector('span');
+    if (btnText) {
+        btnText.textContent = `Add Selected (${count})`;
+    }
+    comityAddSelectedBtn.disabled = count === 0;
+}
+
+async function addSelectedComityMembers() {
+    if (selectedComityStaffIds.length === 0) return;
+
+    const originalBtnContent = comityAddSelectedBtn.innerHTML;
+    comityAddSelectedBtn.disabled = true;
+    comityAddSelectedBtn.innerHTML = `
+        <span>Adding...</span>
+        <div class="loader-spinner" style="width: 14px; height: 14px; border-width: 2px;"></div>
+    `;
+
+    try {
+        const response = await fetch(`${API_URL}/comity/members`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user_ids: selectedComityStaffIds
+            })
+        });
+
+        const resData = await response.json();
+        if (response.ok && resData.status) {
+            showToast(resData.message || 'Members added successfully.', 'success');
+            closeComityModal();
+            fetchComityMembers();
+        } else {
+            showToast(resData.error || 'Failed to add members to comity.', 'error');
+        }
+    } catch (err) {
+        showToast('Network error while adding members.', 'error');
+        console.error(err);
+    } finally {
+        comityAddSelectedBtn.disabled = false;
+        comityAddSelectedBtn.innerHTML = originalBtnContent;
+        updateComitySelectedButton();
+    }
+}
+
+// Modal Event Listeners
+comityOpenAddBtn.addEventListener('click', openComityModal);
+closeComityModalBtn.addEventListener('click', closeComityModal);
+cancelComityBtn.addEventListener('click', closeComityModal);
+comityStaffSearchInput.addEventListener('input', (e) => fetchComityStaff(e.target.value));
+comityAddSelectedBtn.addEventListener('click', addSelectedComityMembers);
+
+// Close modal if clicking overlay
+comityModal.addEventListener('click', (e) => {
+    if (e.target === comityModal) {
+        closeComityModal();
+    }
+});
+
+// Expose comity functions globally
+window.toggleComityMemberStatus = toggleComityMemberStatus;
+window.removeComityMember = removeComityMember;
+window.handleComityStaffSelect = handleComityStaffSelect;
 
 // Initial Bootstrapping
 window.addEventListener('DOMContentLoaded', checkAuth);

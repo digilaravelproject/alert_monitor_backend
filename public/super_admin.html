@@ -77,6 +77,10 @@
                     <i class="fa-solid fa-users-gear"></i>
                     <span>Staff Enrollment</span>
                 </a>
+                <a href="#" class="menu-item" id="menu-comity">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Comity Members</span>
+                </a>
                 <a href="#" class="menu-item" id="menu-permissions">
                     <i class="fa-solid fa-key"></i>
                     <span>Manage Permissions</span>
@@ -290,6 +294,64 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- COMITY SECTION -->
+            <div id="comity-section" style="display: none;">
+                <header class="content-header">
+                    <div class="header-title">
+                        <h1>Comity Members</h1>
+                        <p class="subtitle">Manage critical committee members, toggle active status, and enroll new members</p>
+                    </div>
+                    <button id="comity-open-add-btn" class="btn btn-primary">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Add Member</span>
+                    </button>
+                </header>
+
+                <!-- Stats Section -->
+                <section class="stats-grid">
+                    <div class="stats-card card-blue">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Total Members</span>
+                            <h3 id="stat-total-comity">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="stats-card card-purple">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Active Members</span>
+                            <h3 id="stat-active-comity">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="stats-card card-teal">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-user-slash"></i>
+                        </div>
+                        <div class="stats-details">
+                            <span class="stats-title">Inactive Members</span>
+                            <h3 id="stat-inactive-comity">0</h3>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Comity Members Cards Grid -->
+                <section id="comity-members-list-wrapper">
+                    <div id="comity-grid" class="comity-grid">
+                        <!-- Populated dynamically via JS -->
+                        <div class="table-loading" style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 0;">
+                            <div class="loader-spinner"></div>
+                            <span style="margin-top: 12px; color: var(--text-muted);">Fetching comity members...</span>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -1414,6 +1476,38 @@
                     </button>
                 </footer>
             </form>
+        </div>
+    </div>
+
+    <!-- COMITY MODAL -->
+    <div id="comity-modal" class="modal-wrapper">
+        <div class="modal-card" style="max-width: 500px;">
+            <header class="modal-header">
+                <h2>Add Staff to Comity</h2>
+                <button id="close-comity-modal-btn" class="modal-close-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            
+            <div class="modal-form">
+                <div class="search-box" style="max-width: 100%;">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="comity-staff-search-input" placeholder="Search by name or number...">
+                </div>
+
+                <!-- Staff Checklist container -->
+                <div id="comity-staff-list-container" class="comity-staff-list">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+                <footer class="modal-footer">
+                    <button type="button" id="cancel-comity-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="button" id="comity-add-selected-btn" class="btn btn-primary" disabled>
+                        <span>Add Selected (0)</span>
+                        <i class="fa-solid fa-user-plus"></i>
+                    </button>
+                </footer>
+            </div>
         </div>
     </div>
 

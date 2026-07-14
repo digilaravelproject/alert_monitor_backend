@@ -415,6 +415,21 @@ async function updateSchema() {
                 );
                 PRINT 'Table user_notification_status created.';
             END
+
+            -- Create comity_members table
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[comity_members]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[comity_members] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    user_id INT UNIQUE NOT NULL,
+                    is_active BIT NOT NULL DEFAULT 1,
+                    admin_id INT NOT NULL,
+                    created_at DATETIME DEFAULT GETDATE(),
+                    CONSTRAINT FK_comity_members_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    CONSTRAINT FK_comity_members_admin_id FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE NO ACTION
+                );
+                PRINT 'Table comity_members created.';
+            END
         `);
 
         console.log('Database migration completed successfully.');

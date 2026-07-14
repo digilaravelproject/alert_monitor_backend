@@ -10,9 +10,11 @@ const homepageController = require('../controllers/homepageController');
 const pageController = require('../controllers/pageController');
 const faqController = require('../controllers/faqController');
 const notificationController = require('../controllers/notificationController');
+const comityController = require('../controllers/comityController');
 const { authenticateToken } = require('../middlewares/authMiddleware');
 const { validateAddOrUpdateUser, validateVerifyOtp } = require('../validations/userValidation');
 const { validateCreateDevice, validateUpdateDevice } = require('../validations/deviceValidation');
+const { validateAddComityMembers } = require('../validations/comityValidation');
 
 // Temp User APIs
 router.post('/temp-users', userController.createTempUser);
@@ -42,6 +44,13 @@ router.get('/staff/:id', authenticateToken, userController.getStaffById);
 router.put('/staff/:id', authenticateToken, validateAddOrUpdateUser, userController.updateStaff);
 router.post('/staff/:id/toggle-block', authenticateToken, userController.toggleBlockStaff);
 router.delete('/staff/:id', authenticateToken, userController.deleteStaff);
+
+// Comity APIs (requires auth)
+router.get('/comity/members', authenticateToken, comityController.getMembersAndStats);
+router.post('/comity/members', authenticateToken, validateAddComityMembers, comityController.addMembers);
+router.post('/comity/members/:userId/toggle', authenticateToken, comityController.toggleMemberStatus);
+router.delete('/comity/members/:userId', authenticateToken, comityController.removeMember);
+router.get('/comity/staff', authenticateToken, comityController.getStaffWithComityStatus);
 
 // Permissions APIs (requires auth)
 router.get('/permissions', authenticateToken, permissionController.getAll);
