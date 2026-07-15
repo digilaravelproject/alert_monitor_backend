@@ -1,5 +1,6 @@
 const deviceRepository = require('../repositories/deviceRepository');
 const locationRepository = require('../repositories/locationRepository');
+const comityRepository = require('../repositories/comityRepository');
 
 class DeviceController {
     async create(req, res) {
@@ -91,6 +92,14 @@ class DeviceController {
             } else if (isAdmin) {
                 adminId = req.user.id;
             } else {
+                const isActive = await comityRepository.isUserActiveComityMember(req.user.id);
+                if (!isActive) {
+                    return res.status(200).json({
+                        status: true,
+                        counts: { total: 0, active: 0, deactive: 0 },
+                        data: []
+                    });
+                }
                 const userRepository = require('../repositories/userRepository');
                 const userProfile = await userRepository.getProfile(req.user.id, req.user.role);
                 if (userProfile && userProfile.location_id) {
@@ -445,7 +454,18 @@ class DeviceController {
 
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const isAdmin = req.user.role === 'Admin';
+            let adminId = isSuperAdmin ? null : req.user.id;
+
+            if (!isSuperAdmin && !isAdmin) {
+                const isActive = await comityRepository.isUserActiveComityMember(req.user.id);
+                if (!isActive) {
+                    return res.status(404).json({
+                        status: false,
+                        error: 'Alert not found or access denied'
+                    });
+                }
+            }
 
             const analysisData = await deviceRepository.getAnalysisData(parseInt(id, 10), adminId, isSuperAdmin);
             if (!analysisData) {
@@ -480,6 +500,13 @@ class DeviceController {
             } else if (isAdmin) {
                 adminId = req.user.id;
             } else {
+                const isActive = await comityRepository.isUserActiveComityMember(req.user.id);
+                if (!isActive) {
+                    return res.status(200).json({
+                        status: true,
+                        data: null
+                    });
+                }
                 const userRepository = require('../repositories/userRepository');
                 const userProfile = await userRepository.getProfile(req.user.id, req.user.role);
                 if (userProfile && userProfile.location_id) {
@@ -519,6 +546,13 @@ class DeviceController {
             } else if (isAdmin) {
                 adminId = req.user.id;
             } else {
+                const isActive = await comityRepository.isUserActiveComityMember(req.user.id);
+                if (!isActive) {
+                    return res.status(200).json({
+                        status: true,
+                        data: []
+                    });
+                }
                 const userRepository = require('../repositories/userRepository');
                 const userProfile = await userRepository.getProfile(req.user.id, req.user.role);
                 if (userProfile && userProfile.location_id) {

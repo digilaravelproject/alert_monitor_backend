@@ -11,6 +11,7 @@ const pageController = require('../controllers/pageController');
 const faqController = require('../controllers/faqController');
 const notificationController = require('../controllers/notificationController');
 const comityController = require('../controllers/comityController');
+const reportController = require('../controllers/reportController');
 const { authenticateToken } = require('../middlewares/authMiddleware');
 const { validateAddOrUpdateUser, validateVerifyOtp } = require('../validations/userValidation');
 const { validateCreateDevice, validateUpdateDevice } = require('../validations/deviceValidation');
@@ -100,6 +101,10 @@ router.post('/devices/:id/acknowledge-alert', authenticateToken, deviceControlle
 router.post('/alerts/:feedId/acknowledge', authenticateToken, deviceController.acknowledgeAlertByFeedId);
 router.get('/devices/:id/alerts', authenticateToken, deviceController.getAlertsForDevice);
 router.get('/devices/:id/analysis', authenticateToken, deviceController.getAnalysis);
+
+// Reports API (requires auth)
+router.get('/reports', authenticateToken, reportController.handleOverviewOrPdf);
+router.get('/reports/filter', authenticateToken, reportController.filterReport);
 
 // FCM Token APIs (requires auth)
 router.post('/fcm-token', authenticateToken, userController.saveFcmToken);

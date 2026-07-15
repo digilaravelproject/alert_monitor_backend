@@ -63,7 +63,11 @@ class FcmRepository {
             SELECT DISTINCT t.fcm_token
             FROM user_fcm_tokens t
             INNER JOIN users u ON t.user_id = u.id
-            WHERE u.is_blocked = 0 AND (u.location_id = @locationId
+            LEFT JOIN roles r ON u.role_id = r.id
+            LEFT JOIN comity_members cm ON u.id = cm.user_id
+            WHERE u.is_blocked = 0 
+              AND (r.name = 'Admin' OR (cm.user_id IS NOT NULL AND cm.is_active = 1))
+              AND (u.location_id = @locationId
         `;
 
         if (adminId) {
@@ -110,8 +114,13 @@ class FcmRepository {
     async getAllTokens() {
         await poolConnect;
         const result = await pool.request().query(`
-            SELECT DISTINCT fcm_token
-            FROM user_fcm_tokens
+            SELECT DISTINCT t.fcm_token
+            FROM user_fcm_tokens t
+            INNER JOIN users u ON t.user_id = u.id
+            LEFT JOIN roles r ON u.role_id = r.id
+            LEFT JOIN comity_members cm ON u.id = cm.user_id
+            WHERE u.is_blocked = 0
+              AND (r.name = 'Admin' OR (cm.user_id IS NOT NULL AND cm.is_active = 1))
         `);
         return result.recordset.map(row => row.fcm_token);
     }

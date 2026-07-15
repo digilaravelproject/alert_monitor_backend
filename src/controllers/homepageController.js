@@ -1,4 +1,5 @@
 const homepageRepository = require('../repositories/homepageRepository');
+const comityRepository = require('../repositories/comityRepository');
 
 class HomepageController {
     async getHomepage(req, res) {
@@ -12,6 +13,20 @@ class HomepageController {
 
             const isSuperAdmin = req.user.role === 'Super Admin';
             const isAdmin = req.user.role === 'Admin';
+
+            if (!isSuperAdmin && !isAdmin) {
+                const isActive = await comityRepository.isUserActiveComityMember(req.user.id);
+                if (!isActive) {
+                    return res.status(200).json({
+                        status: true,
+                        counts: {
+                            active_alerts: 0,
+                            assigned: 0
+                        },
+                        recent_alerts: []
+                    });
+                }
+            }
 
             let data;
             if (isSuperAdmin || isAdmin) {

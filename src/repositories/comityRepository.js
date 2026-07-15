@@ -156,6 +156,18 @@ class ComityRepository {
 
         return addedCount;
     }
+
+    async isUserActiveComityMember(userId) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('userId', sql.Int, userId)
+            .query('SELECT TOP 1 is_active FROM comity_members WHERE user_id = @userId');
+        
+        if (result.recordset.length === 0) {
+            return false;
+        }
+        return result.recordset[0].is_active === true || result.recordset[0].is_active === 1;
+    }
 }
 
 module.exports = new ComityRepository();
