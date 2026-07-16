@@ -124,6 +124,25 @@ class FcmRepository {
         `);
         return result.recordset.map(row => row.fcm_token);
     }
+
+    async getOtherStaffTokensForLocation(locationId, excludeUserId) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('locationId', sql.Int, locationId)
+            .input('excludeUserId', sql.Int, excludeUserId)
+            .query(`
+                SELECT DISTINCT t.fcm_token
+                FROM user_fcm_tokens t
+                INNER JOIN users u ON t.user_id = u.id
+                LEFT JOIN roles r ON u.role_id = r.id
+                WHERE u.is_blocked = 0 
+                  AND u.id != @excludeUserId
+                  AND u.location_id = @locationId
+                  AND (r.name IS NULL OR r.name != 'Admin')
+                  AND (u.role IS NULL OR u.role != 'Admin')
+            `);
+        return result.recordset.map(row => row.fcm_token);
+    }
 }
 
 module.exports = new FcmRepository();

@@ -750,6 +750,40 @@ class DeviceRepository {
             }
         }));
     }
+
+    async getActiveAlertsByDeviceId(deviceId) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('deviceId', sql.Int, deviceId)
+            .query(`
+                SELECT f.Id as feed_id, f.ev, f.msg, f.Ts_date, f.node, f.ts, f.bat_pct,
+                       d.id as device_id, d.name as device_name, d.type as device_type,
+                       l.id as location_id, l.name as location_name
+                FROM tbl_DeviceFeedData f
+                LEFT JOIN devices d ON (f.node = d.serial_number OR CAST(f.ts AS NVARCHAR(100)) = d.serial_number)
+                LEFT JOIN locations l ON d.location_id = l.id
+                WHERE d.id = @deviceId
+                  AND f.ev <> 'hb'
+                  AND f.Id NOT IN (SELECT feed_id FROM dismissed_alerts)
+            `);
+        return result.recordset;
+    }
+
+    async getAlertByFeedId(feedId) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('feedId', sql.BigInt, feedId)
+            .query(`
+                SELECT f.Id as feed_id, f.ev, f.msg, f.Ts_date, f.node, f.ts, f.bat_pct,
+                       d.id as device_id, d.name as device_name, d.type as device_type,
+                       l.id as location_id, l.name as location_name
+                FROM tbl_DeviceFeedData f
+                LEFT JOIN devices d ON (f.node = d.serial_number OR CAST(f.ts AS NVARCHAR(100)) = d.serial_number)
+                LEFT JOIN locations l ON d.location_id = l.id
+                WHERE f.Id = @feedId
+            `);
+        return result.recordset[0] || null;
+    }
 }
 
 module.exports = new DeviceRepository();

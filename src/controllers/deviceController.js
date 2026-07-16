@@ -305,7 +305,16 @@ class DeviceController {
                 });
             }
 
+            // Get active alerts before dismissal
+            const activeAlerts = await deviceRepository.getActiveAlertsByDeviceId(parseInt(id, 10));
+
             await deviceRepository.dismissAlert(parseInt(id, 10));
+
+            if (activeAlerts && activeAlerts.length > 0) {
+                sendAlertActionNotification(activeAlerts, 'dismiss', req.user).catch(err => {
+                    console.error('Failed to send dismiss push notifications:', err);
+                });
+            }
 
             res.status(200).json({
                 status: true,
@@ -330,7 +339,16 @@ class DeviceController {
 
             const { feedId } = req.params;
 
+            // Get alert before dismissal
+            const alert = await deviceRepository.getAlertByFeedId(parseInt(feedId, 10));
+
             await deviceRepository.dismissAlertByFeedId(parseInt(feedId, 10));
+
+            if (alert) {
+                sendAlertActionNotification([alert], 'dismiss', req.user).catch(err => {
+                    console.error('Failed to send dismiss push notifications:', err);
+                });
+            }
 
             res.status(200).json({
                 status: true,
@@ -402,8 +420,17 @@ class DeviceController {
                 });
             }
 
+            // Get active alerts before acknowledgment
+            const activeAlerts = await deviceRepository.getActiveAlertsByDeviceId(parseInt(id, 10));
+
             const username = req.user.name || req.user.email || 'Operator';
             await deviceRepository.acknowledgeAlert(parseInt(id, 10), username);
+
+            if (activeAlerts && activeAlerts.length > 0) {
+                sendAlertActionNotification(activeAlerts, 'acknowledge', req.user).catch(err => {
+                    console.error('Failed to send acknowledge push notifications:', err);
+                });
+            }
 
             res.status(200).json({
                 status: true,
@@ -429,7 +456,16 @@ class DeviceController {
             const { feedId } = req.params;
             const username = req.user.name || req.user.email || 'Operator';
 
+            // Get alert before acknowledgment
+            const alert = await deviceRepository.getAlertByFeedId(parseInt(feedId, 10));
+
             await deviceRepository.acknowledgeAlertByFeedId(parseInt(feedId, 10), username);
+
+            if (alert) {
+                sendAlertActionNotification([alert], 'acknowledge', req.user).catch(err => {
+                    console.error('Failed to send acknowledge push notifications:', err);
+                });
+            }
 
             res.status(200).json({
                 status: true,
@@ -572,6 +608,69 @@ class DeviceController {
                 error: error.message
             });
         }
+    }
+}
+
+async function sendAlertActionNotification(alerts, actionType, actorUser) {
+    try {
+        const { sendPushNotification } = require('../services/fcmService');
+        const fcmRepository = require('../repositories/fcmRepository');
+
+        for (const alert of alerts) {
+            const locationId = alert.location_id;
+            if (!locationId) continue;
+
+            const tokens = await fcmRepository.getOtherStaffTokensForLocation(locationId, actorUser.id);
+            if (tokens && tokens.length > 0) {
+                const deviceName = alert.device_name || `Sensor node: ${alert.node}`;
+                const actorName = actorUser.name || actorUser.email || 'Operator';
+                
+                let title = '';
+                let status = '';
+                if (actionType === 'dismiss') {
+                    title = 'Alert Dismissed';
+                    status = 'DISMISSED';
+                } else if (actionType === 'acknowledge') {
+                    title = 'Alert Acknowledged';
+                    status = 'ACKNOWLEDGED';
+                }
+
+                const body = `Alert for ${deviceName} has been ${actionType}ed by ${actorName}`;
+
+                const alertDataObj = {
+                    id: String(alert.feed_id),
+                    ev: alert.ev || "",
+                    msg: alert.msg || "",
+                    insert_date: alert.Ts_date ? alert.Ts_date.toISOString() : new Date().toISOString(),
+                    battery_percentage: alert.bat_pct !== null ? Number(alert.bat_pct) : 100,
+                    status: status,
+                    device: alert.device_id ? {
+                        id: Number(alert.device_id),
+                        name: alert.device_name || null,
+                        serial_number: alert.node || null,
+                        type: alert.device_type || null,
+                        location: alert.location_id ? {
+                            id: Number(alert.location_id),
+                            name: alert.location_name || null
+                        } : null
+                    } : null
+                };
+
+                const payload = {
+                    title,
+                    body,
+                    data: {
+                        type: "panic_alert",
+                        alert: JSON.stringify(alertDataObj)
+                    }
+                };
+
+                console.log(`[AlertActionNotification] Sending ${actionType} alert notification to ${tokens.length} token(s).`);
+                await sendPushNotification(tokens, payload);
+            }
+        }
+    } catch (err) {
+        console.error('[AlertActionNotification] Error sending push notification:', err);
     }
 }
 

@@ -100,7 +100,7 @@ class ComityRepository {
             LEFT JOIN levels l ON u.level_id = l.id
             LEFT JOIN locations loc ON u.location_id = loc.id
             LEFT JOIN comity_members cm ON u.id = cm.user_id
-            WHERE u.role != 'Admin'
+            WHERE (COALESCE(r.name, u.role) IS NULL OR COALESCE(r.name, u.role) != 'Admin')
         `;
 
         const request = pool.request();
