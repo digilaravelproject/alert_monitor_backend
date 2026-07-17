@@ -3,8 +3,12 @@ const permissionRepository = require('../repositories/permissionRepository');
 class PermissionController {
     async getAll(req, res) {
         try {
-            // Note: both Super Admins and regular Admins can read permissions
-            if (req.user.role !== 'Super Admin' && req.user.role !== 'Admin') {
+            // Note: Super Admins, regular Admins, and Staff can read permissions
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
+
+            if (!isSuperAdmin && !isAdmin && !isStaff) {
                 return res.status(403).json({
                     status: false,
                     error: 'Forbidden: Access denied'

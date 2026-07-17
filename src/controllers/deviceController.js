@@ -5,7 +5,11 @@ const comityRepository = require('../repositories/comityRepository');
 class DeviceController {
     async create(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
+
+            if (!isAdmin && !isSuperAdmin && !isStaff) {
                 return res.status(403).json({
                     status: false,
                     error: 'Forbidden: Admin privileges required to manage devices'
@@ -13,8 +17,7 @@ class DeviceController {
             }
 
             const { name, serial_number, type, location_id } = req.body;
-            const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
             // 1. Verify location exists and is accessible
             const location = await locationRepository.getById(parseInt(location_id, 10), adminId, isSuperAdmin);
@@ -84,6 +87,7 @@ class DeviceController {
             const { type } = req.query;
             const isSuperAdmin = req.user.role === 'Super Admin';
             const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
             let adminId = null;
             let locationId = null;
 
@@ -91,6 +95,8 @@ class DeviceController {
                 // No filters
             } else if (isAdmin) {
                 adminId = req.user.id;
+            } else if (isStaff) {
+                adminId = req.user.admin_id;
             } else {
                 const isActive = await comityRepository.isUserActiveComityMember(req.user.id);
                 if (!isActive) {
@@ -140,7 +146,8 @@ class DeviceController {
             }
 
             const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const isAdmin = req.user.role === 'Admin';
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
             const devices = await deviceRepository.search(adminId, query, isSuperAdmin);
 
@@ -167,7 +174,8 @@ class DeviceController {
 
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const isAdmin = req.user.role === 'Admin';
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
             const device = await deviceRepository.getById(parseInt(id, 10), adminId, isSuperAdmin);
             if (!device) {
@@ -204,7 +212,8 @@ class DeviceController {
 
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const isAdmin = req.user.role === 'Admin';
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
             const device = await deviceRepository.getById(parseInt(id, 10), adminId, isSuperAdmin);
             if (!device) {
@@ -238,7 +247,8 @@ class DeviceController {
             const { id } = req.params;
             const { name, serial_number, type, location_id } = req.body;
             const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const isAdmin = req.user.role === 'Admin';
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
             // 1. Verify device exists and is accessible
             const device = await deviceRepository.getById(parseInt(id, 10), adminId, isSuperAdmin);
@@ -294,7 +304,8 @@ class DeviceController {
 
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const isAdmin = req.user.role === 'Admin';
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
             // Verify device exists and is accessible
             const device = await deviceRepository.getById(parseInt(id, 10), adminId, isSuperAdmin);
@@ -373,7 +384,8 @@ class DeviceController {
 
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const isAdmin = req.user.role === 'Admin';
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
             // Verify device exists and is accessible
             const device = await deviceRepository.getById(parseInt(id, 10), adminId, isSuperAdmin);
@@ -409,7 +421,8 @@ class DeviceController {
 
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const isAdmin = req.user.role === 'Admin';
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
             // Verify device exists and is accessible
             const device = await deviceRepository.getById(parseInt(id, 10), adminId, isSuperAdmin);
@@ -491,9 +504,10 @@ class DeviceController {
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
             const isAdmin = req.user.role === 'Admin';
-            let adminId = isSuperAdmin ? null : req.user.id;
+            const isStaff = !!req.user.admin_id;
+            let adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
-            if (!isSuperAdmin && !isAdmin) {
+            if (!isSuperAdmin && !isAdmin && !isStaff) {
                 const isActive = await comityRepository.isUserActiveComityMember(req.user.id);
                 if (!isActive) {
                     return res.status(404).json({
@@ -528,6 +542,7 @@ class DeviceController {
             const { id } = req.params;
             const isSuperAdmin = req.user.role === 'Super Admin';
             const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
             let adminId = null;
             let locationId = null;
 
@@ -535,6 +550,8 @@ class DeviceController {
                 // No filters
             } else if (isAdmin) {
                 adminId = req.user.id;
+            } else if (isStaff) {
+                adminId = req.user.admin_id;
             } else {
                 const isActive = await comityRepository.isUserActiveComityMember(req.user.id);
                 if (!isActive) {
@@ -574,6 +591,7 @@ class DeviceController {
         try {
             const isSuperAdmin = req.user.role === 'Super Admin';
             const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
             let adminId = null;
             let locationId = null;
 
@@ -581,6 +599,8 @@ class DeviceController {
                 // No filters for super admins
             } else if (isAdmin) {
                 adminId = req.user.id;
+            } else if (isStaff) {
+                adminId = req.user.admin_id;
             } else {
                 const isActive = await comityRepository.isUserActiveComityMember(req.user.id);
                 if (!isActive) {

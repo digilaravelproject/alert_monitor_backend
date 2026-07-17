@@ -430,6 +430,18 @@ async function updateSchema() {
                 );
                 PRINT 'Table comity_members created.';
             END
+
+            -- Create blacklisted_tokens table
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[blacklisted_tokens]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[blacklisted_tokens] (
+                    id INT IDENTITY(1,1) PRIMARY KEY,
+                    token NVARCHAR(MAX) NOT NULL,
+                    blacklisted_at DATETIME DEFAULT GETDATE(),
+                    expires_at DATETIME NOT NULL
+                );
+                PRINT 'Table blacklisted_tokens created.';
+            END
         `);
 
         console.log('Database migration completed successfully.');

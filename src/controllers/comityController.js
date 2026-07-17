@@ -4,15 +4,18 @@ class ComityController {
     // 1. GET /api/comity/members
     async getMembersAndStats(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
+
+            if (!isAdmin && !isSuperAdmin && !isStaff) {
                 return res.status(403).json({
                     status: false,
-                    error: 'Forbidden: Admin access required'
+                    error: 'Forbidden: Admin or staff access required'
                 });
             }
 
-            const adminId = req.user.id;
-            const isSuperAdmin = req.user.role === 'Super Admin';
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
             const result = await comityService.getMembersAndStats(adminId, isSuperAdmin);
             res.status(200).json({
@@ -31,10 +34,14 @@ class ComityController {
     // 2. POST /api/comity/members/:userId/toggle
     async toggleMemberStatus(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
+
+            if (!isAdmin && !isSuperAdmin && !isStaff) {
                 return res.status(403).json({
                     status: false,
-                    error: 'Forbidden: Admin access required'
+                    error: 'Forbidden: Admin or staff access required'
                 });
             }
 
@@ -46,8 +53,7 @@ class ComityController {
                 });
             }
 
-            const adminId = req.user.id;
-            const isSuperAdmin = req.user.role === 'Super Admin';
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
             const result = await comityService.toggleMemberStatus(userId, adminId, isSuperAdmin);
             res.status(200).json({
@@ -66,10 +72,14 @@ class ComityController {
     // 3. DELETE /api/comity/members/:userId
     async removeMember(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
+
+            if (!isAdmin && !isSuperAdmin && !isStaff) {
                 return res.status(403).json({
                     status: false,
-                    error: 'Forbidden: Admin access required'
+                    error: 'Forbidden: Admin or staff access required'
                 });
             }
 
@@ -81,8 +91,7 @@ class ComityController {
                 });
             }
 
-            const adminId = req.user.id;
-            const isSuperAdmin = req.user.role === 'Super Admin';
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
             await comityService.removeMember(userId, adminId, isSuperAdmin);
             res.status(200).json({
@@ -100,15 +109,18 @@ class ComityController {
     // 4. GET /api/comity/staff
     async getStaffWithComityStatus(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
+
+            if (!isAdmin && !isSuperAdmin && !isStaff) {
                 return res.status(403).json({
                     status: false,
-                    error: 'Forbidden: Admin access required'
+                    error: 'Forbidden: Admin or staff access required'
                 });
             }
 
-            const adminId = req.user.id;
-            const isSuperAdmin = req.user.role === 'Super Admin';
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
             const searchQuery = req.query.query || '';
 
             const data = await comityService.getStaffWithComityStatus(adminId, searchQuery, isSuperAdmin);
@@ -127,16 +139,19 @@ class ComityController {
     // 5. POST /api/comity/members
     async addMembers(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
+
+            if (!isAdmin && !isSuperAdmin && !isStaff) {
                 return res.status(403).json({
                     status: false,
-                    error: 'Forbidden: Admin access required'
+                    error: 'Forbidden: Admin or staff access required'
                 });
             }
 
             const userIds = req.body.normalizedUserIds || [];
-            const adminId = req.user.id;
-            const isSuperAdmin = req.user.role === 'Super Admin';
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
             const addedCount = await comityService.addMembers(userIds, adminId, isSuperAdmin);
             res.status(201).json({

@@ -13,8 +13,9 @@ class HomepageController {
 
             const isSuperAdmin = req.user.role === 'Super Admin';
             const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
 
-            if (!isSuperAdmin && !isAdmin) {
+            if (!isSuperAdmin && !isAdmin && !isStaff) {
                 const isActive = await comityRepository.isUserActiveComityMember(req.user.id);
                 if (!isActive) {
                     return res.status(200).json({
@@ -29,8 +30,8 @@ class HomepageController {
             }
 
             let data;
-            if (isSuperAdmin || isAdmin) {
-                const adminId = isSuperAdmin ? null : req.user.id;
+            if (isSuperAdmin || isAdmin || isStaff) {
+                const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
                 data = await homepageRepository.getHomepageData(adminId, isSuperAdmin);
             } else {
                 data = await homepageRepository.getNonAdminHomepageData(req.user.id);

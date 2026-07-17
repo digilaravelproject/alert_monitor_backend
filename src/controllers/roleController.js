@@ -57,15 +57,16 @@ class RoleController {
         try {
             const isSuperAdmin = req.user.role === 'Super Admin';
             const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
 
-            if (!isSuperAdmin && !isAdmin) {
+            if (!isSuperAdmin && !isAdmin && !isStaff) {
                 return res.status(403).json({
                     status: false,
                     error: 'Forbidden: Access denied'
                 });
             }
 
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
             const roles = await roleRepository.getAll(adminId, isSuperAdmin);
             res.status(200).json({
                 status: true,
@@ -83,8 +84,9 @@ class RoleController {
         try {
             const isSuperAdmin = req.user.role === 'Super Admin';
             const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
 
-            if (!isSuperAdmin && !isAdmin) {
+            if (!isSuperAdmin && !isAdmin && !isStaff) {
                 return res.status(403).json({
                     status: false,
                     error: 'Forbidden: Access denied'
@@ -99,7 +101,7 @@ class RoleController {
                 });
             }
 
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
             const roles = await roleRepository.search(adminId, query, isSuperAdmin);
             res.status(200).json({
                 status: true,
@@ -117,8 +119,9 @@ class RoleController {
         try {
             const isSuperAdmin = req.user.role === 'Super Admin';
             const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
 
-            if (!isSuperAdmin && !isAdmin) {
+            if (!isSuperAdmin && !isAdmin && !isStaff) {
                 return res.status(403).json({
                     status: false,
                     error: 'Forbidden: Access denied'
@@ -126,7 +129,7 @@ class RoleController {
             }
 
             const { id } = req.params;
-            const adminId = isSuperAdmin ? null : req.user.id;
+            const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
             const role = await roleRepository.getById(id, adminId, isSuperAdmin);
             if (!role) {
                 return res.status(404).json({

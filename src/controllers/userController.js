@@ -441,6 +441,31 @@ class UserController {
                 const fcmRepository = require('../repositories/fcmRepository');
                 await fcmRepository.deleteToken(req.user.id, fcm_token);
             }
+
+            const authHeader = req.headers['authorization'];
+            const token = authHeader && authHeader.split(' ')[1];
+            if (token) {
+                const { pool, poolConnect } = require('../config/database');
+                const sql = require('mssql');
+                const jwt = require('jsonwebtoken');
+
+                await poolConnect;
+                let expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day fallback
+                try {
+                    const decoded = jwt.decode(token);
+                    if (decoded && decoded.exp) {
+                        expiresAt = new Date(decoded.exp * 1000);
+                    }
+                } catch (e) {
+                    console.error('Error decoding jwt for expiry:', e);
+                }
+
+                await pool.request()
+                    .input('token', sql.NVarChar, token)
+                    .input('expires_at', sql.DateTime, expiresAt)
+                    .query('INSERT INTO blacklisted_tokens (token, expires_at) VALUES (@token, @expires_at)');
+            }
+
             res.status(200).json({
                 status: true,
                 message: 'Logged out successfully'

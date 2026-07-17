@@ -40,6 +40,19 @@ function mapUserRow(row) {
     };
 }
 
+function getEffectiveAdminId(user) {
+    if (!user) return null;
+    if (user.role === 'Admin' || user.role === 'Super Admin') {
+        return user.id;
+    }
+    return user.admin_id || null;
+}
+
+function checkAccess(user) {
+    if (!user) return false;
+    return user.role === 'Admin' || user.role === 'Super Admin' || !!user.admin_id;
+}
+
 class UserService {
     // 1. Temp User APIs
     async createTempUser(email, phone_number) {
@@ -52,6 +65,10 @@ class UserService {
 
     // 2. Add User (Staff Enrollment)
     async addStaff(name, phone_number, role, access_level, location_id, currentUser) {
+        if (!checkAccess(currentUser)) {
+            throw new ServiceError('Forbidden: Access denied', 403);
+        }
+
         const normalizedPhone = normalizePhoneNumber(phone_number);
 
         // Check if user already exists
@@ -60,7 +77,7 @@ class UserService {
             throw new ServiceError('Mobile number is already registered', 400);
         }
 
-        const adminId = currentUser.id;
+        const adminId = getEffectiveAdminId(currentUser);
         const isBlocked = 0; // default not blocked
 
         let roleId = null;
@@ -189,6 +206,7 @@ class UserService {
             loc_city: user.loc_city,
             loc_zip_code: user.loc_zip_code,
             access_level: user.access_level,
+            admin_id: user.admin_id,
             location: user.location_id ? {
                 id: user.location_id,
                 name: user.loc_name,
@@ -202,7 +220,7 @@ class UserService {
 
         // Generate Access Token (JWT)
         const accessToken = jwt.sign(
-            { id: user.id, phone_number: user.phone_number, role: user.role },
+            { id: user.id, phone_number: user.phone_number, role: user.role, admin_id: user.admin_id },
             env.JWT_SECRET,
             { expiresIn: '1d' }
         );
@@ -253,12 +271,11 @@ class UserService {
 
     // 7. Staff Listing & Stats
     async getStaffAndStats(currentUser, levelQuery = 'all') {
-        const adminId = currentUser.id;
-        const role = currentUser.role;
-
-        if (role !== 'Admin' && role !== 'Super Admin') {
+        if (!checkAccess(currentUser)) {
             throw new ServiceError('Forbidden: Access denied', 403);
         }
+
+        const adminId = getEffectiveAdminId(currentUser);
 
         const counts = await userRepository.getStaffStats(adminId);
         const data = await userRepository.findStaff(adminId, levelQuery);
@@ -271,12 +288,11 @@ class UserService {
 
     // 8. Search Staff Members
     async searchStaff(currentUser, query) {
-        const adminId = currentUser.id;
-        const role = currentUser.role;
-
-        if (role !== 'Admin' && role !== 'Super Admin') {
+        if (!checkAccess(currentUser)) {
             throw new ServiceError('Forbidden: Access denied', 403);
         }
+
+        const adminId = getEffectiveAdminId(currentUser);
 
         const results = await userRepository.searchStaff(adminId, query);
         return results.map(mapUserRow);
@@ -284,12 +300,11 @@ class UserService {
 
     // 9. Staff Member by ID
     async getStaffById(staffId, currentUser) {
-        const adminId = currentUser.id;
-        const role = currentUser.role;
-
-        if (role !== 'Admin' && role !== 'Super Admin') {
+        if (!checkAccess(currentUser)) {
             throw new ServiceError('Forbidden: Access denied', 403);
         }
+
+        const adminId = getEffectiveAdminId(currentUser);
 
         const result = await userRepository.checkStaffOwnership(staffId, adminId);
         if (result.length === 0) {
@@ -301,12 +316,11 @@ class UserService {
 
     // 10. Update Staff Details
     async updateStaff(staffId, currentUser, name, phone_number, role, access_level, location_id) {
-        const adminId = currentUser.id;
-        const currentUserRole = currentUser.role;
-
-        if (currentUserRole !== 'Admin' && currentUserRole !== 'Super Admin') {
+        if (!checkAccess(currentUser)) {
             throw new ServiceError('Forbidden: Access denied', 403);
         }
+
+        const adminId = getEffectiveAdminId(currentUser);
 
         // Check ownership first
         const checkResult = await userRepository.checkStaffOwnership(staffId, adminId);
@@ -322,7 +336,7 @@ class UserService {
             throw new ServiceError('Mobile number is already registered', 400);
         }
 
-        const staffOwnerAdminId = checkResult[0].admin_id;
+        const staffOwnerAdminId = checkResult[0].admin_id || adminId;
         let roleId = null;
         const roleStr = String(role).trim();
         if (/^\d+$/.test(roleStr)) {
@@ -370,12 +384,11 @@ class UserService {
 
     // 11. Toggle Block/Unblock Staff
     async toggleBlockStaff(staffId, currentUser) {
-        const adminId = currentUser.id;
-        const role = currentUser.role;
-
-        if (role !== 'Admin' && role !== 'Super Admin') {
+        if (!checkAccess(currentUser)) {
             throw new ServiceError('Forbidden: Access denied', 403);
         }
+
+        const adminId = getEffectiveAdminId(currentUser);
 
         // Check ownership first
         const checkResult = await userRepository.checkStaffOwnership(staffId, adminId);
@@ -396,12 +409,11 @@ class UserService {
 
     // 12. Delete Staff
     async deleteStaff(staffId, currentUser) {
-        const adminId = currentUser.id;
-        const role = currentUser.role;
-
-        if (role !== 'Admin' && role !== 'Super Admin') {
+        if (!checkAccess(currentUser)) {
             throw new ServiceError('Forbidden: Access denied', 403);
         }
+
+        const adminId = getEffectiveAdminId(currentUser);
 
         // Check ownership first
         const checkResult = await userRepository.checkStaffOwnership(staffId, adminId);

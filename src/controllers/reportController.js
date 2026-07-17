@@ -8,6 +8,7 @@ class ReportController {
         try {
             const isSuperAdmin = req.user.role === 'Super Admin';
             const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
             
             let adminId = null;
             let locationId = null;
@@ -17,6 +18,8 @@ class ReportController {
                 // No restrictions
             } else if (isAdmin) {
                 adminId = req.user.id;
+            } else if (isStaff) {
+                adminId = req.user.admin_id;
             } else {
                 // Non-admin / Staff check comity active status
                 const isActive = await comityRepository.isUserActiveComityMember(req.user.id);
@@ -324,6 +327,7 @@ class ReportController {
         try {
             const isSuperAdmin = req.user.role === 'Super Admin';
             const isAdmin = req.user.role === 'Admin';
+            const isStaff = !!req.user.admin_id;
             
             let adminId = null;
             let locationId = null;
@@ -332,6 +336,8 @@ class ReportController {
                 // No restrictions
             } else if (isAdmin) {
                 adminId = req.user.id;
+            } else if (isStaff) {
+                adminId = req.user.admin_id;
             } else {
                 // Non-admin / Staff check comity active status
                 const isActive = await comityRepository.isUserActiveComityMember(req.user.id);
@@ -344,6 +350,7 @@ class ReportController {
                         data: []
                     });
                 }
+                const userRepository = require('../repositories/userRepository');
                 const userProfile = await userRepository.getProfile(req.user.id, req.user.role);
                 if (userProfile && userProfile.location_id) {
                     locationId = userProfile.location_id;

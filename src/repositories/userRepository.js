@@ -104,7 +104,7 @@ class UserRepository {
             .query(`
                 SELECT TOP 1 u.id, u.name, u.email, u.phone_number, u.profile_image, COALESCE(r.name, u.role) as role, u.role_id, COALESCE(l.name, u.access_level) as access_level, u.level_id, u.location, u.location_id,
                        loc.name as loc_name, loc.address as loc_address, loc.city as loc_city, loc.zip_code as loc_zip_code, loc.is_active as loc_is_active,
-                       u.otp, u.otp_expiry 
+                       u.otp, u.otp_expiry, u.admin_id
                 FROM users u
                 LEFT JOIN roles r ON u.role_id = r.id
                 LEFT JOIN levels l ON u.level_id = l.id
@@ -334,7 +334,7 @@ class UserRepository {
                 .input('id', sql.Int, userId)
                 .query(`
                     SELECT u.id, u.name, u.email, u.phone_number, u.profile_image, COALESCE(r.name, u.role) as role, u.role_id, u.location_id,
-                           loc.name as loc_name, loc.address as loc_address, loc.city as loc_city, loc.zip_code as loc_zip_code
+                           loc.name as loc_name, loc.address as loc_address, loc.city as loc_city, loc.zip_code as loc_zip_code, u.admin_id
                     FROM users u
                     LEFT JOIN roles r ON u.role_id = r.id
                     LEFT JOIN locations loc ON u.location_id = loc.id
