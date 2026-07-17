@@ -3,12 +3,12 @@ const locationRepository = require('../repositories/locationRepository');
 class LocationController {
     async create(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Admin privileges required to manage locations'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Admin privileges required to manage locations'
+            //     });
+            // }
 
             const { name, address, city, zip_code, latitude, longitude } = req.body;
             if (!name || typeof name !== 'string' || name.trim() === '') {
@@ -69,12 +69,12 @@ class LocationController {
 
     async getAll(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const adminId = req.user.id;
             const locations = await locationRepository.getAll(adminId);
@@ -102,12 +102,12 @@ class LocationController {
 
     async getById(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const adminId = req.user.id;
@@ -134,12 +134,12 @@ class LocationController {
 
     async search(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { query } = req.query;
             if (!query || typeof query !== 'string' || query.trim() === '') {
@@ -166,12 +166,12 @@ class LocationController {
 
     async update(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const { name, address, city, zip_code, latitude, longitude } = req.body;
@@ -236,12 +236,12 @@ class LocationController {
 
     async toggleStatus(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const adminId = req.user.id;
@@ -272,12 +272,12 @@ class LocationController {
 
     async delete(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const adminId = req.user.id;

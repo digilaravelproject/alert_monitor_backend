@@ -3,12 +3,12 @@ const levelRepository = require('../repositories/levelRepository');
 class LevelController {
     async create(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Admin privileges required to manage levels'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Admin privileges required to manage levels'
+            //     });
+            // }
 
             const { name, description, sla_window, cycle_count, response_logic, color } = req.body;
             if (!name || typeof name !== 'string' || name.trim() === '') {
@@ -52,12 +52,12 @@ class LevelController {
 
     async getAll(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const adminId = req.user.id;
             const levels = await levelRepository.getAll(adminId);
@@ -81,12 +81,12 @@ class LevelController {
 
     async search(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { query } = req.query;
             if (!query || typeof query !== 'string' || query.trim() === '') {
@@ -113,12 +113,12 @@ class LevelController {
 
     async getById(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const adminId = req.user.id;
@@ -145,12 +145,12 @@ class LevelController {
 
     async update(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const { name, description, sla_window, cycle_count, response_logic, color } = req.body;
@@ -197,12 +197,12 @@ class LevelController {
 
     async delete(req, res) {
         try {
-            if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Access denied'
-                });
-            }
+            // if (req.user.role !== 'Admin' && req.user.role !== 'Super Admin') {
+            //     return res.status(403).json({
+            //         status: false,
+            //         error: 'Forbidden: Access denied'
+            //     });
+            // }
 
             const { id } = req.params;
             const adminId = req.user.id;

@@ -25,89 +25,17 @@ class PermissionController {
     }
 
     async create(req, res) {
-        try {
-            if (req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Super admin privileges required'
-                });
-            }
-
-            const { name, description, is_active } = req.body;
-            if (!name || typeof name !== 'string' || name.trim() === '') {
-                return res.status(400).json({
-                    status: false,
-                    error: 'Permission name is required'
-                });
-            }
-
-            const existing = await permissionRepository.findByName(name);
-            if (existing) {
-                return res.status(400).json({
-                    status: false,
-                    error: 'Permission name already exists'
-                });
-            }
-
-            const newPerm = await permissionRepository.create({ name, description, is_active });
-            res.status(201).json({
-                status: true,
-                data: newPerm
-            });
-        } catch (error) {
-            res.status(500).json({
-                status: false,
-                error: error.message
-            });
-        }
+        return res.status(403).json({
+            status: false,
+            error: 'Forbidden: Adding new permissions is disabled'
+        });
     }
 
     async update(req, res) {
-        try {
-            if (req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Super admin privileges required'
-                });
-            }
-
-            const { id } = req.params;
-            const { name, description, is_active } = req.body;
-
-            if (!name || typeof name !== 'string' || name.trim() === '') {
-                return res.status(400).json({
-                    status: false,
-                    error: 'Permission name is required'
-                });
-            }
-
-            const existing = await permissionRepository.getById(id);
-            if (!existing) {
-                return res.status(404).json({
-                    status: false,
-                    error: 'Permission not found'
-                });
-            }
-
-            const duplicate = await permissionRepository.findByNameExcludingId(name, id);
-            if (duplicate) {
-                return res.status(400).json({
-                    status: false,
-                    error: 'Permission name already exists'
-                });
-            }
-
-            const updated = await permissionRepository.update(id, { name, description, is_active });
-            res.status(200).json({
-                status: true,
-                data: updated
-            });
-        } catch (error) {
-            res.status(500).json({
-                status: false,
-                error: error.message
-            });
-        }
+        return res.status(403).json({
+            status: false,
+            error: 'Forbidden: Updating permissions is disabled'
+        });
     }
 
     async toggle(req, res) {
@@ -143,34 +71,10 @@ class PermissionController {
     }
 
     async delete(req, res) {
-        try {
-            if (req.user.role !== 'Super Admin') {
-                return res.status(403).json({
-                    status: false,
-                    error: 'Forbidden: Super admin privileges required'
-                });
-            }
-
-            const { id } = req.params;
-            const existing = await permissionRepository.getById(id);
-            if (!existing) {
-                return res.status(404).json({
-                    status: false,
-                    error: 'Permission not found'
-                });
-            }
-
-            await permissionRepository.delete(id);
-            res.status(200).json({
-                status: true,
-                message: 'Permission deleted successfully'
-            });
-        } catch (error) {
-            res.status(500).json({
-                status: false,
-                error: error.message
-            });
-        }
+        return res.status(403).json({
+            status: false,
+            error: 'Forbidden: Deleting permissions is disabled'
+        });
     }
 }
 

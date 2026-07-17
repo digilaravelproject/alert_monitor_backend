@@ -906,12 +906,10 @@ function setActiveMenu(menuItem, sectionItem) {
 // Fetch Permissions List
 async function fetchPermissions() {
     permissionsTableBody.innerHTML = `
-        <tr class="table-loading">
-            <td colspan="4">
-                <div class="loader-spinner"></div>
-                <span>Fetching permissions...</span>
-            </td>
-        </tr>
+        <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px;">
+            <div class="loader-spinner"></div>
+            <span style="margin-top: 10px; color: var(--text-muted);">Fetching permissions...</span>
+        </div>
     `;
 
     try {
@@ -936,43 +934,59 @@ async function fetchPermissions() {
     }
 }
 
-// Render Permissions to Table
+// Get Icon class based on Permission Name
+function getPermissionIcon(name) {
+    name = (name || '').toLowerCase();
+    if (name.includes('device')) return 'fa-solid fa-laptop-medical';
+    if (name.includes('report') || name.includes('analytic')) return 'fa-solid fa-chart-line';
+    if (name.includes('staff') || name.includes('user')) return 'fa-solid fa-user-shield';
+    if (name.includes('alert')) return 'fa-solid fa-triangle-exclamation';
+    if (name.includes('organization') || name.includes('setup')) return 'fa-solid fa-sitemap';
+    if (name.includes('role')) return 'fa-solid fa-user-gear';
+    if (name.includes('level')) return 'fa-solid fa-layer-group';
+    if (name.includes('location')) return 'fa-solid fa-location-dot';
+    if (name.includes('log')) return 'fa-solid fa-terminal';
+    if (name.includes('export') || name.includes('download')) return 'fa-solid fa-file-export';
+    return 'fa-solid fa-key';
+}
+
+// Render Permissions to Table / Cards Grid
 function renderPermissions(permissions) {
     if (!permissions || permissions.length === 0) {
         permissionsTableBody.innerHTML = `
-            <tr class="table-empty">
-                <td colspan="4" style="text-align: center; padding: 40px 0;">
-                    <i class="fa-regular fa-folder-open" style="font-size: 24px; margin-bottom: 8px; display: block; color: var(--text-darker);"></i>
-                    <span>No permissions found.</span>
-                </td>
-            </tr>
+            <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; min-height: 200px;">
+                <i class="fa-regular fa-folder-open" style="font-size: 32px; margin-bottom: 12px; color: var(--text-darker);"></i>
+                <span style="color: var(--text-muted);">No permissions found.</span>
+            </div>
         `;
         return;
     }
 
     permissionsTableBody.innerHTML = permissions.map(perm => {
         const checkedAttr = perm.is_active ? 'checked' : '';
+        const statusClass = perm.is_active ? 'enabled' : 'disabled';
+        const statusText = perm.is_active ? 'Enabled' : 'Disabled';
+        const iconClass = getPermissionIcon(perm.name);
+        
         return `
-            <tr>
-                <td class="staff-name-col">${escapeHTML(perm.name)}</td>
-                <td>${escapeHTML(perm.description || 'N/A')}</td>
-                <td style="text-align: center;">
+            <div class="permission-card">
+                <div class="permission-card-header">
+                    <div class="permission-card-title">
+                        <i class="${iconClass}"></i>
+                        <span>${escapeHTML(perm.name)}</span>
+                    </div>
+                </div>
+                <div class="permission-card-description">
+                    ${escapeHTML(perm.description || 'No description provided.')}
+                </div>
+                <div class="permission-card-footer">
+                    <span class="permission-status-text ${statusClass}">${statusText}</span>
                     <label class="switch">
                         <input type="checkbox" ${checkedAttr} onchange="togglePermissionStatus(${perm.id})">
                         <span class="slider round"></span>
                     </label>
-                </td>
-                <td>
-                    <div class="action-buttons">
-                        <button class="btn-icon btn-edit" onclick="openEditPermissionModal(${perm.id})" title="Edit">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                        <button class="btn-icon btn-delete" onclick="deletePermission(${perm.id})" title="Delete">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
+                </div>
+            </div>
         `;
     }).join('');
 }
@@ -993,7 +1007,21 @@ async function togglePermissionStatus(id) {
             showToast(resData.message || 'Permission status updated.', 'success');
             // update local list
             const perm = permissionsList.find(p => p.id === id);
-            if (perm) perm.is_active = !perm.is_active;
+            if (perm) {
+                perm.is_active = !perm.is_active;
+                // Render the current list to keep the status label in sync
+                const query = permissionSearchInput.value.toLowerCase().trim();
+                if (query) {
+                    const filtered = permissionsList.filter(p => {
+                        const name = (p.name || '').toLowerCase();
+                        const desc = (p.description || '').toLowerCase();
+                        return name.includes(query) || desc.includes(query);
+                    });
+                    renderPermissions(filtered);
+                } else {
+                    renderPermissions(permissionsList);
+                }
+            }
         } else {
             showToast(resData.error || 'Failed to toggle permission status.', 'error');
             fetchPermissions();
