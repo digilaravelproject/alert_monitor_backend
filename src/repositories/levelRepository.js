@@ -19,36 +19,41 @@ class LevelRepository {
         return result.recordset[0];
     }
 
-    async getAll(adminId) {
+    async getAll(adminId, isSuperAdmin = false) {
         await poolConnect;
         let query = `
             SELECT l.id, l.name, l.description, l.sla_window, l.cycle_count, l.response_logic, l.color, l.admin_id, l.created_at,
                    u.name AS owner_name, u.email AS owner_email
             FROM levels l
             LEFT JOIN users u ON l.admin_id = u.id
-            WHERE l.admin_id = @adminId
         `;
-        const request = pool.request().input('adminId', sql.Int, adminId);
+        const request = pool.request();
+        if (!isSuperAdmin) {
+            query += ' WHERE l.admin_id = @adminId';
+            request.input('adminId', sql.Int, adminId);
+        }
         query += ' ORDER BY l.id DESC';
         const result = await request.query(query);
         return result.recordset;
     }
 
-    async getById(id, adminId) {
+    async getById(id, adminId, isSuperAdmin = false) {
         await poolConnect;
         let query = `
             SELECT l.id, l.name, l.description, l.sla_window, l.cycle_count, l.response_logic, l.color, l.admin_id, l.created_at
             FROM levels l
-            WHERE l.id = @id AND l.admin_id = @adminId
+            WHERE l.id = @id
         `;
-        const request = pool.request()
-            .input('id', sql.Int, id)
-            .input('adminId', sql.Int, adminId);
+        const request = pool.request().input('id', sql.Int, id);
+        if (!isSuperAdmin) {
+            query += ' AND l.admin_id = @adminId';
+            request.input('adminId', sql.Int, adminId);
+        }
         const result = await request.query(query);
         return result.recordset[0];
     }
 
-    async search(adminId, queryStr) {
+    async search(adminId, queryStr, isSuperAdmin = false) {
         await poolConnect;
         let query = `
             SELECT l.id, l.name, l.description, l.sla_window, l.cycle_count, l.response_logic, l.color, l.admin_id, l.created_at,
@@ -56,11 +61,12 @@ class LevelRepository {
             FROM levels l
             LEFT JOIN users u ON l.admin_id = u.id
             WHERE (l.name LIKE @searchQuery OR l.description LIKE @searchQuery)
-              AND l.admin_id = @adminId
         `;
-        const request = pool.request()
-            .input('searchQuery', sql.NVarChar, `%${queryStr.trim()}%`)
-            .input('adminId', sql.Int, adminId);
+        const request = pool.request().input('searchQuery', sql.NVarChar, `%${queryStr.trim()}%`);
+        if (!isSuperAdmin) {
+            query += ' AND l.admin_id = @adminId';
+            request.input('adminId', sql.Int, adminId);
+        }
         query += ' ORDER BY l.id DESC';
         const result = await request.query(query);
         return result.recordset;
@@ -93,22 +99,30 @@ class LevelRepository {
             .query('DELETE FROM levels WHERE id = @id');
     }
 
-    async findByName(adminId, name) {
+    async findByName(adminId, name, isSuperAdmin = false) {
         await poolConnect;
-        const result = await pool.request()
-            .input('admin_id', sql.Int, adminId)
-            .input('name', sql.NVarChar, name.trim())
-            .query('SELECT TOP 1 id FROM levels WHERE name = @name AND admin_id = @admin_id');
+        const request = pool.request()
+            .input('name', sql.NVarChar, name.trim());
+        let query = 'SELECT TOP 1 id FROM levels WHERE name = @name';
+        if (!isSuperAdmin) {
+            query += ' AND admin_id = @admin_id';
+            request.input('admin_id', sql.Int, adminId);
+        }
+        const result = await request.query(query);
         return result.recordset[0];
     }
 
-    async findByNameExcludingId(adminId, name, id) {
+    async findByNameExcludingId(adminId, name, id, isSuperAdmin = false) {
         await poolConnect;
-        const result = await pool.request()
-            .input('admin_id', sql.Int, adminId)
+        const request = pool.request()
             .input('name', sql.NVarChar, name.trim())
-            .input('id', sql.Int, id)
-            .query('SELECT TOP 1 id FROM levels WHERE name = @name AND id != @id AND admin_id = @admin_id');
+            .input('id', sql.Int, id);
+        let query = 'SELECT TOP 1 id FROM levels WHERE name = @name AND id != @id';
+        if (!isSuperAdmin) {
+            query += ' AND admin_id = @admin_id';
+            request.input('admin_id', sql.Int, adminId);
+        }
+        const result = await request.query(query);
         return result.recordset[0];
     }
 }

@@ -30,8 +30,8 @@ class HomepageController {
             }
 
             let data;
-            if (isSuperAdmin || isAdmin || isStaff) {
-                const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
+            if (isSuperAdmin || isAdmin) {
+                const adminId = isSuperAdmin ? null : req.user.id;
                 data = await homepageRepository.getHomepageData(adminId, isSuperAdmin);
             } else {
                 data = await homepageRepository.getNonAdminHomepageData(req.user.id);

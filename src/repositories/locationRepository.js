@@ -19,7 +19,7 @@ class LocationRepository {
         return result.recordset[0];
     }
 
-    async getAll(adminId) {
+    async getAll(adminId, isSuperAdmin = false) {
         await poolConnect;
         let query = `
             SELECT l.id, l.name, l.address, l.city, l.zip_code, l.latitude, l.longitude, l.is_active, l.admin_id, l.created_at,
@@ -28,42 +28,50 @@ class LocationRepository {
                    u.name AS owner_name, u.email AS owner_email
             FROM locations l
             LEFT JOIN users u ON l.admin_id = u.id
-            WHERE l.admin_id = @adminId
         `;
-        const request = pool.request().input('adminId', sql.Int, adminId);
+        const request = pool.request();
+        if (!isSuperAdmin) {
+            query += ' WHERE l.admin_id = @adminId';
+            request.input('adminId', sql.Int, adminId);
+        }
         query += ' ORDER BY l.id DESC';
         const result = await request.query(query);
         return result.recordset;
     }
 
-    async getById(id, adminId) {
+    async getById(id, adminId, isSuperAdmin = false) {
         await poolConnect;
         let query = `
             SELECT l.id, l.name, l.address, l.city, l.zip_code, l.latitude, l.longitude, l.is_active, l.admin_id, l.created_at,
                    (SELECT COUNT(*) FROM users u WHERE u.location_id = l.id) as nodes,
                    (SELECT COUNT(*) FROM users u WHERE u.location_id = l.id AND u.is_blocked = 0) as online_nodes
             FROM locations l
-            WHERE l.id = @id AND l.admin_id = @adminId
+            WHERE l.id = @id
         `;
         const request = pool.request()
-            .input('id', sql.Int, id)
-            .input('adminId', sql.Int, adminId);
+            .input('id', sql.Int, id);
+        if (!isSuperAdmin) {
+            query += ' AND l.admin_id = @adminId';
+            request.input('adminId', sql.Int, adminId);
+        }
         const result = await request.query(query);
         return result.recordset[0];
     }
 
-    async findByName(adminId, name) {
+    async findByName(adminId, name, isSuperAdmin = false) {
         await poolConnect;
         const request = pool.request()
-            .input('name', sql.NVarChar, name.trim())
-            .input('adminId', sql.Int, adminId);
-        
-        let query = 'SELECT TOP 1 id, name FROM locations WHERE name = @name AND admin_id = @adminId';
+            .input('name', sql.NVarChar, name.trim());
+        let query = 'SELECT TOP 1 id, name FROM locations WHERE name = @name';
+        if (!isSuperAdmin) {
+            query += ' AND admin_id = @adminId';
+            request.input('adminId', sql.Int, adminId);
+        }
         const result = await request.query(query);
         return result.recordset[0];
     }
 
-    async search(adminId, queryStr) {
+    async search(adminId, queryStr, isSuperAdmin = false) {
         await poolConnect;
         let query = `
             SELECT l.id, l.name, l.address, l.city, l.zip_code, l.latitude, l.longitude, l.is_active, l.admin_id, l.created_at,
@@ -73,11 +81,13 @@ class LocationRepository {
             FROM locations l
             LEFT JOIN users u ON l.admin_id = u.id
             WHERE (l.name LIKE @searchQuery OR l.address LIKE @searchQuery OR l.city LIKE @searchQuery OR l.zip_code LIKE @searchQuery)
-              AND l.admin_id = @adminId
         `;
         const request = pool.request()
-            .input('searchQuery', sql.NVarChar, `%${queryStr.trim()}%`)
-            .input('adminId', sql.Int, adminId);
+            .input('searchQuery', sql.NVarChar, `%${queryStr.trim()}%`);
+        if (!isSuperAdmin) {
+            query += ' AND l.admin_id = @adminId';
+            request.input('adminId', sql.Int, adminId);
+        }
         query += ' ORDER BY l.id DESC';
         const result = await request.query(query);
         return result.recordset;

@@ -18,8 +18,9 @@ class LevelController {
                 });
             }
 
-            const adminId = (req.user.role === 'Admin' || req.user.role === 'Super Admin') ? req.user.id : req.user.admin_id;
-            const existing = await levelRepository.findByName(adminId, name);
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const adminId = (req.user.role === 'Admin' || isSuperAdmin) ? req.user.id : req.user.admin_id;
+            const existing = await levelRepository.findByName(adminId, name, isSuperAdmin);
             if (existing) {
                 return res.status(400).json({
                     status: false,
@@ -59,8 +60,9 @@ class LevelController {
             //     });
             // }
 
-            const adminId = (req.user.role === 'Admin' || req.user.role === 'Super Admin') ? req.user.id : req.user.admin_id;
-            const levels = await levelRepository.getAll(adminId);
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const adminId = (req.user.role === 'Admin' || isSuperAdmin) ? req.user.id : req.user.admin_id;
+            const levels = await levelRepository.getAll(adminId, isSuperAdmin);
 
             res.status(200).json({
                 status: true,
@@ -96,8 +98,9 @@ class LevelController {
                 });
             }
 
-            const adminId = (req.user.role === 'Admin' || req.user.role === 'Super Admin') ? req.user.id : req.user.admin_id;
-            const levels = await levelRepository.search(adminId, query);
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const adminId = (req.user.role === 'Admin' || isSuperAdmin) ? req.user.id : req.user.admin_id;
+            const levels = await levelRepository.search(adminId, query, isSuperAdmin);
 
             res.status(200).json({
                 status: true,
@@ -121,8 +124,9 @@ class LevelController {
             // }
 
             const { id } = req.params;
-            const adminId = (req.user.role === 'Admin' || req.user.role === 'Super Admin') ? req.user.id : req.user.admin_id;
-            const level = await levelRepository.getById(parseInt(id, 10), adminId);
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const adminId = (req.user.role === 'Admin' || isSuperAdmin) ? req.user.id : req.user.admin_id;
+            const level = await levelRepository.getById(parseInt(id, 10), adminId, isSuperAdmin);
 
             if (!level) {
                 return res.status(404).json({
@@ -162,9 +166,10 @@ class LevelController {
                 });
             }
 
-            const adminId = (req.user.role === 'Admin' || req.user.role === 'Super Admin') ? req.user.id : req.user.admin_id;
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const adminId = (req.user.role === 'Admin' || isSuperAdmin) ? req.user.id : req.user.admin_id;
 
-            const existingLevel = await levelRepository.getById(parseInt(id, 10), adminId);
+            const existingLevel = await levelRepository.getById(parseInt(id, 10), adminId, isSuperAdmin);
             if (!existingLevel) {
                 return res.status(404).json({
                     status: false,
@@ -172,7 +177,7 @@ class LevelController {
                 });
             }
 
-            const duplicate = await levelRepository.findByNameExcludingId(adminId, name, parseInt(id, 10));
+            const duplicate = await levelRepository.findByNameExcludingId(adminId, name, parseInt(id, 10), isSuperAdmin);
             if (duplicate) {
                 return res.status(400).json({
                     status: false,
@@ -205,9 +210,10 @@ class LevelController {
             // }
 
             const { id } = req.params;
-            const adminId = (req.user.role === 'Admin' || req.user.role === 'Super Admin') ? req.user.id : req.user.admin_id;
+            const isSuperAdmin = req.user.role === 'Super Admin';
+            const adminId = (req.user.role === 'Admin' || isSuperAdmin) ? req.user.id : req.user.admin_id;
 
-            const existingLevel = await levelRepository.getById(parseInt(id, 10), adminId);
+            const existingLevel = await levelRepository.getById(parseInt(id, 10), adminId, isSuperAdmin);
             if (!existingLevel) {
                 return res.status(404).json({
                     status: false,
