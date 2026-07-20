@@ -43,10 +43,11 @@ class RoleRepository {
                    u.name AS owner_name, u.email AS owner_email
             FROM roles r
             LEFT JOIN users u ON r.admin_id = u.id
+            WHERE r.admin_id IS NOT NULL
         `;
         const request = pool.request();
         if (!isSuperAdmin && adminId !== null) {
-            query += ' WHERE r.admin_id = @adminId OR r.admin_id IS NULL';
+            query += ' AND r.admin_id = @adminId';
             request.input('adminId', sql.Int, adminId);
         }
         query += ' ORDER BY r.id DESC';
@@ -79,11 +80,11 @@ class RoleRepository {
                    u.name AS owner_name, u.email AS owner_email
             FROM roles r
             LEFT JOIN users u ON r.admin_id = u.id
-            WHERE r.id = @id
+            WHERE r.id = @id AND r.admin_id IS NOT NULL
         `;
         const request = pool.request().input('id', sql.Int, id);
         if (!isSuperAdmin && adminId !== null) {
-            query += ' AND (r.admin_id = @adminId OR r.admin_id IS NULL)';
+            query += ' AND r.admin_id = @adminId';
             request.input('adminId', sql.Int, adminId);
         }
         
@@ -102,11 +103,11 @@ class RoleRepository {
                    u.name AS owner_name, u.email AS owner_email
             FROM roles r
             LEFT JOIN users u ON r.admin_id = u.id
-            WHERE (r.name LIKE @searchQuery OR r.description LIKE @searchQuery)
+            WHERE (r.name LIKE @searchQuery OR r.description LIKE @searchQuery) AND r.admin_id IS NOT NULL
         `;
         const request = pool.request().input('searchQuery', sql.NVarChar, `%${query.trim()}%`);
         if (!isSuperAdmin && adminId !== null) {
-            queryStr += ' AND (r.admin_id = @adminId OR r.admin_id IS NULL)';
+            queryStr += ' AND r.admin_id = @adminId';
             request.input('adminId', sql.Int, adminId);
         }
         queryStr += ' ORDER BY r.id DESC';
@@ -157,7 +158,7 @@ class RoleRepository {
         const result = await pool.request()
             .input('admin_id', sql.Int, adminId)
             .input('name', sql.NVarChar, name.trim())
-            .query('SELECT TOP 1 id FROM roles WHERE name = @name AND (admin_id = @admin_id OR admin_id IS NULL)');
+            .query('SELECT TOP 1 id FROM roles WHERE name = @name AND admin_id = @admin_id AND admin_id IS NOT NULL');
         return result.recordset[0];
     }
 
@@ -167,7 +168,7 @@ class RoleRepository {
             .input('admin_id', sql.Int, adminId)
             .input('name', sql.NVarChar, name.trim())
             .input('id', sql.Int, id)
-            .query('SELECT TOP 1 id FROM roles WHERE name = @name AND id != @id AND (admin_id = @admin_id OR admin_id IS NULL)');
+            .query('SELECT TOP 1 id FROM roles WHERE name = @name AND id != @id AND admin_id = @admin_id AND admin_id IS NOT NULL');
         return result.recordset[0];
     }
 }

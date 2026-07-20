@@ -60,7 +60,7 @@ class UserRepository {
         const result = await pool.request()
             .input('name', sql.NVarChar, user.name)
             .input('phone_number', sql.NVarChar, user.phone_number)
-            .input('role', sql.NVarChar, null) // "When staff addition and updation store the role id should not store role name."
+            .input('role', sql.NVarChar, user.role || null) // "When staff addition and updation store the role id should not store role name."
             .input('role_id', sql.Int, user.role_id)
             .input('access_level', sql.NVarChar, null) // "Should send level id insteade of level name in add staff and update staff api's."
             .input('level_id', sql.Int, user.level_id)
@@ -259,13 +259,13 @@ class UserRepository {
         return result.recordset;
     }
 
-    async updateStaff(staffId, name, phone, roleId, levelId, locationId) {
+    async updateStaff(staffId, name, phone, role, roleId, levelId, locationId) {
         await poolConnect;
         const result = await pool.request()
             .input('id', sql.Int, staffId)
             .input('name', sql.NVarChar, name.trim())
             .input('phone_number', sql.NVarChar, phone)
-            .input('role', sql.NVarChar, null) // Set to null, do not store role name!
+            .input('role', sql.NVarChar, role || null) // Set to null for staff, set to role (e.g. 'Admin') for vendors
             .input('role_id', sql.Int, roleId)
             .input('access_level', sql.NVarChar, null) // Set to null, do not store level name!
             .input('level_id', sql.Int, levelId)

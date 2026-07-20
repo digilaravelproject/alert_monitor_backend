@@ -80,8 +80,24 @@ class UserService {
         const adminId = getEffectiveAdminId(currentUser);
         const isBlocked = 0; // default not blocked
 
-        let roleId = null;
+        const isSuperAdmin = currentUser.role === 'Super Admin';
+        let isVendor = false;
         const roleStr = String(role).trim();
+        if (isSuperAdmin) {
+            if (roleStr === 'Admin') {
+                isVendor = true;
+            } else if (/^\d+$/.test(roleStr)) {
+                const { pool } = require('../config/database');
+                const roleResult = await pool.request()
+                    .input('id', roleStr)
+                    .query('SELECT name FROM roles WHERE id = @id');
+                if (roleResult.recordset.length > 0 && roleResult.recordset[0].name === 'Admin') {
+                    isVendor = true;
+                }
+            }
+        }
+
+        let roleId = null;
         if (/^\d+$/.test(roleStr)) {
             roleId = parseInt(roleStr, 10);
         } else {
@@ -120,6 +136,7 @@ class UserService {
         const newUser = await userRepository.create({
             name: name.trim(),
             phone_number: normalizedPhone,
+            role: isVendor ? 'Admin' : null,
             role_id: roleId,
             level_id: levelId,
             location_id: parsedLocationId,
@@ -128,7 +145,6 @@ class UserService {
             is_blocked: isBlocked
         });
 
-        const isSuperAdmin = currentUser.role === 'Super Admin';
         // Fetch user with location details
         const freshUser = await userRepository.checkStaffOwnership(newUser.id, adminId, isSuperAdmin);
         return mapUserRow(freshUser[0]);
@@ -340,8 +356,24 @@ class UserService {
         }
 
         const staffOwnerAdminId = checkResult[0].admin_id || adminId;
-        let roleId = null;
+
+        let isVendor = false;
         const roleStr = String(role).trim();
+        if (isSuperAdmin) {
+            if (roleStr === 'Admin') {
+                isVendor = true;
+            } else if (/^\d+$/.test(roleStr)) {
+                const { pool } = require('../config/database');
+                const roleResult = await pool.request()
+                    .input('id', roleStr)
+                    .query('SELECT name FROM roles WHERE id = @id');
+                if (roleResult.recordset.length > 0 && roleResult.recordset[0].name === 'Admin') {
+                    isVendor = true;
+                }
+            }
+        }
+
+        let roleId = null;
         if (/^\d+$/.test(roleStr)) {
             roleId = parseInt(roleStr, 10);
         } else {
@@ -378,7 +410,7 @@ class UserService {
         }
 
         // Update record
-        await userRepository.updateStaff(staffId, name, normalizedPhone, roleId, levelId, parsedLocationId);
+        await userRepository.updateStaff(staffId, name, normalizedPhone, isVendor ? 'Admin' : null, roleId, levelId, parsedLocationId);
 
         // Fetch updated user with location details
         const freshUser = await userRepository.checkStaffOwnership(staffId, adminId, isSuperAdmin);
