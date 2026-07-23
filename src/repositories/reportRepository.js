@@ -114,8 +114,7 @@ class ReportRepository {
 
         // Apply filters parameter
         if (filters.type) {
-            whereClauses.push('(d.type = @type OR f.ev LIKE @typeLike)');
-            request.input('type', sql.NVarChar, filters.type);
+            whereClauses.push('f.ev LIKE @typeLike');
             request.input('typeLike', sql.NVarChar, `%${filters.type}%`);
         }
 

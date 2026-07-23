@@ -1,5 +1,5 @@
 const validateCreateDevice = (req, res, next) => {
-    const { name, serial_number, type, location_id } = req.body;
+    const { name, serial_number, location_id } = req.body;
     const errors = [];
 
     if (!name || typeof name !== 'string' || name.trim() === '') {
@@ -7,9 +7,6 @@ const validateCreateDevice = (req, res, next) => {
     }
     if (!serial_number || typeof serial_number !== 'string' || serial_number.trim() === '') {
         errors.push('Device serial number/ID is required');
-    }
-    if (!type || typeof type !== 'string' || type.trim() === '') {
-        errors.push('Device type is required');
     }
     if (location_id === undefined || location_id === null || (typeof location_id !== 'string' && typeof location_id !== 'number') || (typeof location_id === 'string' && location_id.trim() === '') || isNaN(parseInt(location_id, 10))) {
         errors.push('Location is required');
@@ -25,7 +22,7 @@ const validateCreateDevice = (req, res, next) => {
 };
 
 const validateUpdateDevice = (req, res, next) => {
-    const { name, serial_number, type, location_id } = req.body;
+    const { name, serial_number, location_id } = req.body;
     const errors = [];
 
     if (!name || typeof name !== 'string' || name.trim() === '') {
@@ -33,9 +30,6 @@ const validateUpdateDevice = (req, res, next) => {
     }
     if (!serial_number || typeof serial_number !== 'string' || serial_number.trim() === '') {
         errors.push('Device serial number/ID is required');
-    }
-    if (!type || typeof type !== 'string' || type.trim() === '') {
-        errors.push('Device type is required');
     }
     if (location_id === undefined || location_id === null || (typeof location_id !== 'string' && typeof location_id !== 'number') || (typeof location_id === 'string' && location_id.trim() === '') || isNaN(parseInt(location_id, 10))) {
         errors.push('Location is required');

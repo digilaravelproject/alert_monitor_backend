@@ -23,18 +23,6 @@ class LocationController {
                     error: 'Address is required'
                 });
             }
-            if (!city || typeof city !== 'string' || city.trim() === '') {
-                return res.status(400).json({
-                    status: false,
-                    error: 'City is required'
-                });
-            }
-            if (!zip_code || typeof zip_code !== 'string' || zip_code.trim() === '') {
-                return res.status(400).json({
-                    status: false,
-                    error: 'Zip code is required'
-                });
-            }
 
             const isSuperAdmin = req.user.role === 'Super Admin';
             const adminId = (req.user.role === 'Admin' || isSuperAdmin) ? req.user.id : req.user.admin_id;
@@ -190,18 +178,6 @@ class LocationController {
                 return res.status(400).json({
                     status: false,
                     error: 'Address is required'
-                });
-            }
-            if (!city || typeof city !== 'string' || city.trim() === '') {
-                return res.status(400).json({
-                    status: false,
-                    error: 'City is required'
-                });
-            }
-            if (!zip_code || typeof zip_code !== 'string' || zip_code.trim() === '') {
-                return res.status(400).json({
-                    status: false,
-                    error: 'Zip code is required'
                 });
             }
 

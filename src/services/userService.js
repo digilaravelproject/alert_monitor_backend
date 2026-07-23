@@ -64,18 +64,33 @@ class UserService {
     }
 
     // 2. Add User (Staff Enrollment)
-    async addStaff(name, phone_number, role, access_level, location_id, currentUser) {
+    async addStaff(name, phone_number, role, access_level, location_id, currentUser, otp) {
         if (!checkAccess(currentUser)) {
             throw new ServiceError('Forbidden: Access denied', 403);
         }
 
         const normalizedPhone = normalizePhoneNumber(phone_number);
 
+        // Verify OTP
+        if (!otp || typeof otp !== 'string' || otp.trim() === '') {
+            throw new ServiceError('OTP is required for staff creation', 400);
+        }
+        const phoneOtpRecord = await userRepository.getPhoneOtp(normalizedPhone);
+        if (!phoneOtpRecord || phoneOtpRecord.otp !== otp.trim()) {
+            throw new ServiceError('Invalid OTP', 400);
+        }
+        if (phoneOtpRecord.otp_expiry && new Date() > new Date(phoneOtpRecord.otp_expiry)) {
+            throw new ServiceError('OTP has expired', 400);
+        }
+
         // Check if user already exists
         const existingUsers = await userRepository.findExactPhone(normalizedPhone);
         if (existingUsers.length > 0) {
             throw new ServiceError('Mobile number is already registered', 400);
         }
+
+        // Clean up OTP record
+        await userRepository.deletePhoneOtp(normalizedPhone);
 
         const adminId = getEffectiveAdminId(currentUser);
         const isBlocked = 0; // default not blocked
@@ -333,7 +348,7 @@ class UserService {
     }
 
     // 10. Update Staff Details
-    async updateStaff(staffId, currentUser, name, phone_number, role, access_level, location_id) {
+    async updateStaff(staffId, currentUser, name, phone_number, role, access_level, location_id, otp) {
         if (!checkAccess(currentUser)) {
             throw new ServiceError('Forbidden: Access denied', 403);
         }
@@ -348,6 +363,24 @@ class UserService {
         }
 
         const normalizedPhone = normalizePhoneNumber(phone_number);
+        const currentStaffPhone = checkResult[0].phone_number;
+        const normalizedCurrentPhone = normalizePhoneNumber(currentStaffPhone);
+
+        if (normalizedPhone !== normalizedCurrentPhone) {
+            // Phone number has changed: OTP verification is required
+            if (!otp || typeof otp !== 'string' || otp.trim() === '') {
+                throw new ServiceError('OTP is required to change mobile number', 400);
+            }
+            const phoneOtpRecord = await userRepository.getPhoneOtp(normalizedPhone);
+            if (!phoneOtpRecord || phoneOtpRecord.otp !== otp.trim()) {
+                throw new ServiceError('Invalid OTP', 400);
+            }
+            if (phoneOtpRecord.otp_expiry && new Date() > new Date(phoneOtpRecord.otp_expiry)) {
+                throw new ServiceError('OTP has expired', 400);
+            }
+            // OTP verified successfully, clean it up
+            await userRepository.deletePhoneOtp(normalizedPhone);
+        }
 
         // Check if phone number is already registered by another user
         const phoneCheck = await userRepository.findExactPhoneExcludingId(normalizedPhone, staffId);

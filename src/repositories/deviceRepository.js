@@ -12,17 +12,16 @@ class DeviceRepository {
         return result.recordset[0];
     }
 
-    async create({ name, serial_number, type, location_id }) {
+    async create({ name, serial_number, location_id }) {
         await poolConnect;
         const result = await pool.request()
             .input('name', sql.NVarChar, name.trim())
             .input('serial_number', sql.NVarChar, serial_number.trim())
-            .input('type', sql.NVarChar, type.trim())
             .input('location_id', sql.Int, location_id)
             .query(`
                 INSERT INTO devices (name, serial_number, type, location_id, is_active)
                 OUTPUT INSERTED.id, INSERTED.name, INSERTED.serial_number, INSERTED.type, INSERTED.location_id, INSERTED.is_active, INSERTED.created_at
-                VALUES (@name, @serial_number, @type, @location_id, 1)
+                VALUES (@name, @serial_number, NULL, @location_id, 1)
             `);
         return result.recordset[0];
     }
@@ -114,17 +113,16 @@ class DeviceRepository {
         };
     }
 
-    async update(id, { name, serial_number, type, location_id }) {
+    async update(id, { name, serial_number, location_id }) {
         await poolConnect;
         const result = await pool.request()
             .input('id', sql.Int, id)
             .input('name', sql.NVarChar, name.trim())
             .input('serial_number', sql.NVarChar, serial_number.trim())
-            .input('type', sql.NVarChar, type.trim())
             .input('location_id', sql.Int, location_id)
             .query(`
                 UPDATE devices
-                SET name = @name, serial_number = @serial_number, type = @type, location_id = @location_id
+                SET name = @name, serial_number = @serial_number, location_id = @location_id
                 OUTPUT INSERTED.id, INSERTED.name, INSERTED.serial_number, INSERTED.type, INSERTED.location_id, INSERTED.is_active, INSERTED.created_at
                 WHERE id = @id
             `);
@@ -265,11 +263,6 @@ class DeviceRepository {
             request.input('locationId', sql.Int, locationId);
         } else {
             whereClauses.push('1=0');
-        }
-
-        if (deviceType && deviceType.toLowerCase() !== 'all') {
-            whereClauses.push('d.type = @deviceType');
-            request.input('deviceType', sql.NVarChar, deviceType.trim());
         }
 
         if (whereClauses.length > 0) {

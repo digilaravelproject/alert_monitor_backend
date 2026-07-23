@@ -120,7 +120,9 @@ class FcmRepository {
             LEFT JOIN roles r ON u.role_id = r.id
             LEFT JOIN comity_members cm ON u.id = cm.user_id
             WHERE u.is_blocked = 0
-              AND (r.name = 'Admin' OR (cm.user_id IS NOT NULL AND cm.is_active = 1))
+              AND (cm.user_id IS NOT NULL AND cm.is_active = 1)
+              AND (r.name IS NULL OR r.name != 'Admin')
+              AND (u.role IS NULL OR u.role != 'Admin')
         `);
         return result.recordset.map(row => row.fcm_token);
     }

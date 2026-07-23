@@ -43,14 +43,70 @@ class UserController {
             //         error: 'Forbidden: Admin access required'
             //     });
             // }
-            const { name, phone_number, role, access_level, location_id } = req.body;
-            const newUser = await UserService.addStaff(name, phone_number, role, access_level, location_id, req.user);
+            const { name, phone_number, role, access_level, location_id, otp } = req.body;
+            const newUser = await UserService.addStaff(name, phone_number, role, access_level, location_id, req.user, otp);
             res.status(201).json({
                 status: true,
                 data: newUser
             });
         } catch (error) {
             res.status(error.status || 500).json({
+                status: false,
+                error: error.message
+            });
+        }
+    }
+
+    // 3b. POST: Send OTP for Staff Creation or Edit
+    async sendStaffOtp(req, res) {
+        try {
+            const { phone_number, staff_id } = req.body;
+            if (!phone_number || typeof phone_number !== 'string' || phone_number.trim() === '') {
+                return res.status(400).json({
+                    status: false,
+                    error: 'Mobile number is required'
+                });
+            }
+
+            const { normalizePhoneNumber } = require('../utils/helper');
+            const normalizedPhone = normalizePhoneNumber(phone_number);
+            const userRepository = require('../repositories/userRepository');
+
+            if (staff_id) {
+                // If editing, check if number is registered by another user
+                const phoneCheck = await userRepository.findExactPhoneExcludingId(normalizedPhone, staff_id);
+                if (phoneCheck.length > 0) {
+                    return res.status(400).json({
+                        status: false,
+                        error: 'Mobile number is already registered'
+                    });
+                }
+            } else {
+                // If creating, check if number is registered by any user
+                const existingUsers = await userRepository.findExactPhone(normalizedPhone);
+                if (existingUsers.length > 0) {
+                    return res.status(400).json({
+                        status: false,
+                        error: 'Mobile number is already registered'
+                    });
+                }
+            }
+
+            // Generate mock OTP '1234' with 10 minutes expiry
+            const otp = '1234';
+            const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+
+            await userRepository.savePhoneOtp(normalizedPhone, otp, otpExpiry);
+
+            res.status(200).json({
+                status: true,
+                data: {
+                    message: 'OTP generated successfully',
+                    phone_number: normalizedPhone
+                }
+            });
+        } catch (error) {
+            res.status(500).json({
                 status: false,
                 error: error.message
             });
@@ -245,8 +301,8 @@ class UserController {
     async updateStaff(req, res) {
         try {
             const staffId = req.params.id;
-            const { name, phone_number, role, access_level, location_id } = req.body;
-            const updatedStaff = await UserService.updateStaff(staffId, req.user, name, phone_number, role, access_level, location_id);
+            const { name, phone_number, role, access_level, location_id, otp } = req.body;
+            const updatedStaff = await UserService.updateStaff(staffId, req.user, name, phone_number, role, access_level, location_id, otp);
             res.status(200).json({
                 status: true,
                 message: 'Staff member updated successfully',

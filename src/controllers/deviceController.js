@@ -16,7 +16,7 @@ class DeviceController {
                 });
             }
 
-            const { name, serial_number, type, location_id } = req.body;
+            const { name, serial_number, location_id } = req.body;
             const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
 
             // 1. Verify location exists and is accessible
@@ -41,7 +41,6 @@ class DeviceController {
             const newDevice = await deviceRepository.create({
                 name,
                 serial_number,
-                type,
                 location_id: parseInt(location_id, 10)
             });
 
@@ -60,19 +59,9 @@ class DeviceController {
 
     async getTypes(req, res) {
         try {
-            const types = [
-                'Panic Button',
-                'Gunshot Sensor',
-                'Fire Detector',
-                'Crowd Monitor',
-                'High Noise Sensor',
-                'Presence Radar',
-                'Vibration Tamper',
-                'Hardware Diagnostics'
-            ];
             res.status(200).json({
                 status: true,
-                data: types
+                data: []
             });
         } catch (error) {
             res.status(500).json({
@@ -245,7 +234,7 @@ class DeviceController {
             // }
 
             const { id } = req.params;
-            const { name, serial_number, type, location_id } = req.body;
+            const { name, serial_number, location_id } = req.body;
             const isSuperAdmin = req.user.role === 'Super Admin';
             const isAdmin = req.user.role === 'Admin';
             const adminId = isSuperAdmin ? null : (isAdmin ? req.user.id : req.user.admin_id);
@@ -278,7 +267,7 @@ class DeviceController {
             }
 
             // 4. Update device
-            const updated = await deviceRepository.update(parseInt(id, 10), { name, serial_number, type, location_id: parseInt(location_id, 10) });
+            const updated = await deviceRepository.update(parseInt(id, 10), { name, serial_number, location_id: parseInt(location_id, 10) });
 
             res.status(200).json({
                 status: true,

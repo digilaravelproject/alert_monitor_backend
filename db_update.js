@@ -442,6 +442,25 @@ async function updateSchema() {
                 );
                 PRINT 'Table blacklisted_tokens created.';
             END
+
+            -- Create phone_otps table
+            IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[phone_otps]') AND type in (N'U'))
+            BEGIN
+                CREATE TABLE [dbo].[phone_otps] (
+                    phone_number NVARCHAR(20) PRIMARY KEY,
+                    otp NVARCHAR(10) NOT NULL,
+                    otp_expiry DATETIME NOT NULL,
+                    created_at DATETIME DEFAULT GETDATE()
+                );
+                PRINT 'Table phone_otps created.';
+            END
+
+            -- Alter devices table to make type column NULLable
+            IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[devices]') AND name = 'type')
+            BEGIN
+                ALTER TABLE [dbo].[devices] ALTER COLUMN [type] NVARCHAR(100) NULL;
+                PRINT 'Modified devices.type to be NULLable.';
+            END
         `);
 
         console.log('Database migration completed successfully.');

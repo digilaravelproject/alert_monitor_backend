@@ -379,6 +379,37 @@ class UserRepository {
             return result.recordset[0];
         }
     }
+
+    async savePhoneOtp(phone, otp, expiry) {
+        await poolConnect;
+        await pool.request()
+            .input('phone_number', sql.NVarChar, phone)
+            .query('DELETE FROM phone_otps WHERE phone_number = @phone_number');
+        
+        await pool.request()
+            .input('phone_number', sql.NVarChar, phone)
+            .input('otp', sql.NVarChar, otp)
+            .input('otp_expiry', sql.DateTime, expiry)
+            .query(`
+                INSERT INTO phone_otps (phone_number, otp, otp_expiry)
+                VALUES (@phone_number, @otp, @otp_expiry)
+            `);
+    }
+
+    async getPhoneOtp(phone) {
+        await poolConnect;
+        const result = await pool.request()
+            .input('phone_number', sql.NVarChar, phone)
+            .query('SELECT phone_number, otp, otp_expiry FROM phone_otps WHERE phone_number = @phone_number');
+        return result.recordset[0];
+    }
+
+    async deletePhoneOtp(phone) {
+        await poolConnect;
+        await pool.request()
+            .input('phone_number', sql.NVarChar, phone)
+            .query('DELETE FROM phone_otps WHERE phone_number = @phone_number');
+    }
 }
 
 module.exports = new UserRepository();

@@ -23,6 +23,7 @@ router.get('/temp-users', userController.getTempUsers);
 
 // Staff Enrollment API (requires auth)
 router.post('/add-user', authenticateToken, validateAddOrUpdateUser, userController.addStaff);
+router.post('/staff/send-otp', authenticateToken, userController.sendStaffOtp);
 
 // OTP Auth APIs
 router.post('/login', userController.login);
@@ -87,7 +88,6 @@ router.delete('/locations/:id', authenticateToken, locationController.delete);
 
 // Devices & Alerts APIs (requires auth)
 router.post('/devices', authenticateToken, validateCreateDevice, deviceController.create);
-router.get('/devices/types', authenticateToken, deviceController.getTypes);
 router.get('/alerts', authenticateToken, deviceController.getAlertsData);
 router.get('/alerts/all', authenticateToken, deviceController.getAllAlertsForAdmin);
 router.get('/devices/search', authenticateToken, deviceController.search);
